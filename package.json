@@ -1,0 +1,29 @@
+{
+  "name": "web-app-performance-monitoring",
+  "version": "0.1.0",
+  "bin": {
+    "web-app-performance-monitoring": "bin/web-app-performance-monitoring.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.13",
+    "@types/node": "^22.7.6",
+    "aws-cdk": "2.162.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "aws-cdk-lib": "2.162.1",
+    "aws-sdk": "^2.1691.0",
+    "constructs": "^10.4.2",
+    "source-map-support": "^0.5.21"
+  }
+}
