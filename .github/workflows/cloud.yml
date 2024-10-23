@@ -47,7 +47,7 @@ jobs:
 
       - name: Deploy infrastructure
         if: env.SAFE_SOURCE_NAME == env.DEFAULT_BRANCH
-        run: npm run cdk -- diff
+        run: npm run cdk -- deploy --all --require-approval never
 
       - name: Diff infrastructure
         if: env.SAFE_SOURCE_NAME != env.DEFAULT_BRANCH
