@@ -28,7 +28,7 @@ export class TaskProcessingStack extends cdk.Stack {
     });
 
     // Grant Lambda permissions to interact with SQS
-    queue.grantConsumeMessages(taskHandler);
+    queue.grantSendMessages(taskHandler);
 
     // Create Step Functions state machine
     const startState = new sfn.Pass(this, 'StartState');
