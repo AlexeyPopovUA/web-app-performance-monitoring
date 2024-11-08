@@ -1,5 +1,5 @@
-import {APIGatewayProxyHandler} from 'aws-lambda';
-import SQS from 'aws-sdk/clients/sqs';
+import type {APIGatewayProxyHandler} from 'aws-lambda';
+import { SQS } from '@aws-sdk/client-sqs';
 
 const sqs = new SQS();
 
@@ -22,7 +22,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     MessageBody: JSON.stringify(body)
   };
 
-  await sqs.sendMessage(params).promise();
+  await sqs.sendMessage(params);
 
   console.log('TaskHandler APIGatewayProxyHandler sendMessage params:', params);
 

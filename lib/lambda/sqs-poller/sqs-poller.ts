@@ -1,7 +1,7 @@
-import {SQSHandler} from 'aws-lambda';
-import StepFunctions from 'aws-sdk/clients/stepfunctions';
+import type {SQSHandler} from 'aws-lambda';
+import { SFN } from '@aws-sdk/client-sfn';
 
-const stepfunctions = new StepFunctions();
+const stepfunctions = new SFN();
 
 export const handler: SQSHandler = async (event) => {
   console.log('SQSHandler');
@@ -22,7 +22,7 @@ export const handler: SQSHandler = async (event) => {
 
       console.log('SQSHandler Starting step fn execution', params);
 
-      await stepfunctions.startExecution(params).promise();
+      await stepfunctions.startExecution(params);
     }
   }
 };
