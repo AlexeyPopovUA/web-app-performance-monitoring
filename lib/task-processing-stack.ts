@@ -13,7 +13,8 @@ export class TaskProcessingStack extends cdk.Stack {
 
     // Create SQS queue
     const queue = new sqs.Queue(this, 'TaskQueue', {
-      visibilityTimeout: cdk.Duration.seconds(300)
+      visibilityTimeout: cdk.Duration.seconds(30),
+      retentionPeriod: cdk.Duration.days(1)
     });
 
     // Create Lambda function for handling API requests
@@ -68,8 +69,9 @@ export class TaskProcessingStack extends cdk.Stack {
     // Grant Lambda permissions to interact with SQS and Step Functions
     queue.grantConsumeMessages(sqsPoller);
     stateMachine.grantStartExecution(sqsPoller);
+    stateMachine.grantRead(sqsPoller);
 
     // Add SQS event source to the poller Lambda
-    sqsPoller.addEventSource(new eventSources.SqsEventSource(queue));
+    sqsPoller.addEventSource(new eventSources.SqsEventSource(queue, {batchSize: 1}));
   }
 }

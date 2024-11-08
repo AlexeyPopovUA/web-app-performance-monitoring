@@ -1,13 +1,12 @@
 import {APIGatewayProxyHandler} from 'aws-lambda';
 import SQS from 'aws-sdk/clients/sqs';
-//import StepFunctions from 'aws-sdk/clients/stepfunctions';
 
 const sqs = new SQS();
-//const stepfunctions = new StepFunctions();
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const queueUrl = process.env.QUEUE_URL!;
   const body = JSON.parse(event.body!);
+  console.log('TaskHandler APIGatewayProxyHandler event.body:', body);
 
   // Validate task payload
   if (!body.taskId) {
@@ -24,6 +23,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   };
 
   await sqs.sendMessage(params).promise();
+
+  console.log('TaskHandler APIGatewayProxyHandler sendMessage params:', params);
 
   return {
     statusCode: 202,
