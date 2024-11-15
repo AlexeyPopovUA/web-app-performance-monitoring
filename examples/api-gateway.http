@@ -1,6 +1,8 @@
+#######
+
 # Valid request
 
-POST https://zekjduwfsg.execute-api.eu-west-1.amazonaws.com/prod/request
+POST https://nh3mp4cs87.execute-api.eu-west-1.amazonaws.com/prod/request
 Content-Type: application/json
 
 {
@@ -24,11 +26,11 @@ Content-Type: application/json
   ]
 }
 
-######
+#######
 
 # Invalid JSON payload
 
-POST https://zekjduwfsg.execute-api.eu-west-1.amazonaws.com/prod/request
+POST https://nh3mp4cs87.execute-api.eu-west-1.amazonaws.com/prod/request
 Content-Type: application/json
 
 {bla}
@@ -37,7 +39,7 @@ Content-Type: application/json
 
 # Validation error
 
-POST https://zekjduwfsg.execute-api.eu-west-1.amazonaws.com/prod/request
+POST https://nh3mp4cs87.execute-api.eu-west-1.amazonaws.com/prod/request
 Content-Type: application/json
 
 {

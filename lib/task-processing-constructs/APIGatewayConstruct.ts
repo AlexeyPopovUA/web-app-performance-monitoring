@@ -2,9 +2,10 @@ import {Construct} from 'constructs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import configuration from "../../cfg/configuration";
+import {Queue} from "aws-cdk-lib/aws-sqs/lib/queue";
 
 export class APIGatewayConstruct extends Construct {
-  constructor(scope: Construct, id: string, taskQueueUrl: string) {
+  constructor(scope: Construct, id: string, taskQueue: Queue ) {
     super(scope, id);
 
     // Create Lambda function for handling API requests
@@ -13,7 +14,7 @@ export class APIGatewayConstruct extends Construct {
       handler: 'gateway-proxy-handler.handler',
       code: lambda.Code.fromAsset('dist/gateway-proxy-handler'),
       environment: {
-        QUEUE_URL: taskQueueUrl
+        QUEUE_URL: taskQueue.queueUrl
       }
     });
 
@@ -26,5 +27,7 @@ export class APIGatewayConstruct extends Construct {
     const taskResource = api.root.addResource('request');
     const taskIntegration = new apigateway.LambdaIntegration(gatewayProxyHandler);
     taskResource.addMethod('POST', taskIntegration);
+
+    taskQueue.grantSendMessages(gatewayProxyHandler);
   }
 }

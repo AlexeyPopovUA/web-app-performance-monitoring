@@ -10,7 +10,7 @@ export class TaskProcessingStack extends cdk.Stack {
     super(scope, id, props);
 
     const sqsConstruct = new SqsConstruct(this, `${configuration.COMMON.project}-SqsConstruct`);
-    new APIGatewayConstruct(this, `${configuration.COMMON.project}-APIGatewayConstruct`, sqsConstruct.taskQueue.queueUrl);
+    new APIGatewayConstruct(this, `${configuration.COMMON.project}-APIGatewayConstruct`, sqsConstruct.taskQueue);
     new StateMachineConstruct(this, `${configuration.COMMON.project}-StateMachineConstruct`, sqsConstruct.sqsTaskHandler);
   }
 }
