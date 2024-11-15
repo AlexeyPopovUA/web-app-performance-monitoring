@@ -24,9 +24,18 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   const queueUrl = process.env.QUEUE_URL!;
   let body;
 
-  // Validate task payload
+  // Parse task payload
   try {
     body = JSON.parse(event.body!);
+  } catch (error: unknown) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({message: 'Cannot parse payload', error})
+    };
+  }
+
+  // Validate task payload
+  try {
     await taskSchema.validate(body, {abortEarly: false});
   } catch (err: unknown) {
     return {
@@ -42,8 +51,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   };
 
   await sqs.sendMessage(params);
-
-  console.log('TaskHandler APIGatewayProxyHandler sendMessage params:', params);
 
   return {
     statusCode: 202,
