@@ -17,7 +17,7 @@ export const handler: SQSHandler = async (event) => {
       const params = {
         stateMachineArn: process.env.STATE_MACHINE_ARN!,
         input: JSON.stringify(body),
-        name: `execution-${body.taskId}`
+        name: `execution-${record.messageId}`
       };
 
       console.log('SQSHandler Starting step fn execution', params);
