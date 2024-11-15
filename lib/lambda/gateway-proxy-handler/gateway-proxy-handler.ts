@@ -4,6 +4,7 @@ import {object, string, array, number, ValidationError} from 'yup';
 
 const sqs = new SQS();
 
+// See examples/api-gateway.http for a sample request payload
 const taskSchema = object({
   projectName: string().required(),
   baseUrl: string().required(),
@@ -21,12 +22,11 @@ const taskSchema = object({
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const queueUrl = process.env.QUEUE_URL!;
-  const body = JSON.parse(event.body!);
-
-  console.log('TaskHandler APIGatewayProxyHandler event.body:', body);
+  let body;
 
   // Validate task payload
   try {
+    body = JSON.parse(event.body!);
     await taskSchema.validate(body, {abortEarly: false});
   } catch (err: unknown) {
     return {

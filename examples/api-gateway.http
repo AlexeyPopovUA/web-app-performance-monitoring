@@ -1,0 +1,37 @@
+# Valid request
+
+POST https://zekjduwfsg.execute-api.eu-west-1.amazonaws.com/prod/request
+Content-Type: application/json
+
+{
+  "projectName": "ExampleProject",
+  "baseUrl": "https://example.com",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "urls": [
+    {
+      "shortPageName": "HomePage",
+      "url": "https://example.com/home",
+      "iterations": 5,
+      "browsers": ["chrome", "firefox"]
+    },
+    {
+      "shortPageName": "ContactPage",
+      "url": "https://example.com/contact",
+      "iterations": 3,
+      "browsers": ["chrome"]
+    }
+  ]
+}
+
+######
+
+# Invalid request
+
+POST https://zekjduwfsg.execute-api.eu-west-1.amazonaws.com/prod/request
+Content-Type: application/json
+
+{
+  "projectName": "ExampleProject",
+  "baseUrl": "https://example.com"
+}
