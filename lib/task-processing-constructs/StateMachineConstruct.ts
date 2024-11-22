@@ -20,6 +20,12 @@ export class StateMachineConstruct extends Construct {
       code: lambda.Code.fromAsset('dist/task-generator-step')
     });
 
+    const reportFinalizerLambda = new lambda.Function(this, `${configuration.COMMON.project}-report-finalizer`, {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'report-finalizer-step.handler',
+      code: lambda.Code.fromAsset('dist/report-finalizer-step')
+    });
+
     // Step to generate a list of tasks
     const generateTasks = new tasks.LambdaInvoke(this, 'Generate Tasks', {
       lambdaFunction: taskGeneratorLambda,
@@ -39,20 +45,20 @@ export class StateMachineConstruct extends Construct {
     //   lambdaFunction: analysisInitiatorLambda,
     //   outputPath: '$.Payload'
     // });
-    //
-    //
-    // // Finalizer step to send email notifications
-    // const finalizeReport = new tasks.LambdaInvoke(this, 'Finalize Report', {
-    //   lambdaFunction: reportFinalizerLambda,
-    //   outputPath: '$.Payload'
-    // });
+
+
+    // Finalizer step to send email notifications
+    const finalizeReport = new tasks.LambdaInvoke(this, 'Finalize Report', {
+      lambdaFunction: reportFinalizerLambda,
+      outputPath: '$.Payload'
+    });
 
     // Define the state machine
     const definition = startState
       .next(generateTasks)
       .next(checkState)
       .next(mapState.itemProcessor(initiateAnalysis))
-      //.next(finalizeReport);
+      .next(finalizeReport);
 
     const stateMachine = new sfn.StateMachine(this, `${configuration.COMMON.project}-state-machine`, {
       definitionBody: sfn.DefinitionBody.fromChainable(definition)
