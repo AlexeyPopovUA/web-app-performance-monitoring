@@ -27,13 +27,14 @@ export class StateMachineConstruct extends Construct {
     });
 
     // Map state to schedule concurrent executions of tasks
-    // const mapState = new sfn.Map(this, 'Map State', {
-    //   maxConcurrency: 10,
-    //   itemsPath: '$.tasks',
-    //   resultPath: '$.results'
-    // });
+    const mapState = new sfn.Map(this, 'Map State', {
+      maxConcurrency: 10,
+      itemsPath: '$.concurrentTasks',
+      resultPath: '$.results'
+    });
 
     // Task to process each item in the map state
+    const initiateAnalysis = new sfn.Pass(this, `${configuration.COMMON.project}-single-job`);
     // const initiateAnalysis = new tasks.LambdaInvoke(this, 'Process Task', {
     //   lambdaFunction: analysisInitiatorLambda,
     //   outputPath: '$.Payload'
@@ -50,7 +51,7 @@ export class StateMachineConstruct extends Construct {
     const definition = startState
       .next(generateTasks)
       .next(checkState)
-      //.next(mapState.itemProcessor(initiateAnalysis))
+      .next(mapState.itemProcessor(initiateAnalysis))
       //.next(finalizeReport);
 
     const stateMachine = new sfn.StateMachine(this, `${configuration.COMMON.project}-state-machine`, {
