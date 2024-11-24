@@ -13,6 +13,7 @@ export default {
     },
     REPORTING: {
         bucketName: "web-perf-mon-reports",
-        temporaryBucketName: "web-perf-mon-reports-temp"
+        temporaryBucketName: "web-perf-mon-reports-temp",
+        reportsDomainName: "reports.perf-mon.examples.oleksiipopov.com"
     }
 };

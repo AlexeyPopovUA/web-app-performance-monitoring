@@ -2,6 +2,17 @@ import * as cdk from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {IFunction} from "aws-cdk-lib/aws-lambda";
 import {BlockPublicAccess, Bucket} from "aws-cdk-lib/aws-s3";
+import {
+  AllowedMethods, CachedMethods,
+  Distribution,
+  HttpVersion, OriginAccessIdentity,
+  PriceClass,
+  SecurityPolicyProtocol, ViewerProtocolPolicy
+} from "aws-cdk-lib/aws-cloudfront";
+import {S3BucketOrigin} from "aws-cdk-lib/aws-cloudfront-origins";
+import {Certificate, CertificateValidation} from "aws-cdk-lib/aws-certificatemanager";
+import {AaaaRecord, ARecord, HostedZone, RecordTarget} from "aws-cdk-lib/aws-route53";
+import {CloudFrontTarget} from "aws-cdk-lib/aws-route53-targets";
 
 import configuration from "../cfg/configuration";
 
@@ -24,5 +35,54 @@ export class ReportStack extends cdk.Stack {
     });
 
     props.bucketClients.finalReportWriter && reportBucket.grantWrite(props.bucketClients.finalReportWriter);
+
+    const originAccessIdentity = new OriginAccessIdentity(this, `${configuration.COMMON.project}-reports-origin-access-identity`);
+    reportBucket.grantRead(originAccessIdentity);
+
+    const hostedZone = HostedZone.fromHostedZoneAttributes(this, `${configuration.COMMON.project}-hosted-zone`, {
+      hostedZoneId: configuration.HOSTING.hostedZoneID,
+      zoneName: configuration.HOSTING.hostedZoneName
+    });
+
+    const certificate = new Certificate(this, `${configuration.COMMON.project}-reports-certificate`, {
+      domainName: configuration.REPORTING.reportsDomainName,
+      validation: CertificateValidation.fromDns(hostedZone)
+    });
+
+    const distribution = new Distribution(this, `${configuration.COMMON.project}-reports-distribution`, {
+      // comment contains the distribution name
+      comment: `${configuration.COMMON.project}-main reports distribution`,
+      httpVersion: HttpVersion.HTTP2_AND_3,
+      priceClass: PriceClass.PRICE_CLASS_100,
+      certificate: certificate,
+      enableIpv6: true,
+      minimumProtocolVersion: SecurityPolicyProtocol.TLS_V1_2_2021,
+      enableLogging: false,
+      enabled: true,
+      domainNames: [
+        configuration.REPORTING.reportsDomainName,
+      ],
+      defaultBehavior: {
+        allowedMethods: AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+        cachedMethods: CachedMethods.CACHE_GET_HEAD_OPTIONS,
+        compress: true,
+        viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        origin: S3BucketOrigin.withOriginAccessIdentity(reportBucket, {
+          originAccessIdentity: originAccessIdentity,
+          originShieldRegion: props.env?.region,
+          originPath: "/"
+        })
+      }
+    });
+
+    new ARecord(this, `${configuration.COMMON.project}-reports-a-record`, {
+      zone: hostedZone,
+      target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))
+    });
+
+    new AaaaRecord(this, `${configuration.COMMON.project}-reports-aaaa-record`, {
+      zone: hostedZone,
+      target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))
+    });
   }
 }
