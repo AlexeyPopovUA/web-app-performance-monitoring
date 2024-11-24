@@ -1,4 +1,4 @@
-import {CommonTaskProps, TaskPayload} from "../types/TaskPayload";
+import {CommonTaskProps, TaskPayload} from "../../types/TaskPayload";
 
 type SingleAnalysisJob = CommonTaskProps & {
   shortPageName: string;

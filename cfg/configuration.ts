@@ -9,5 +9,9 @@ export default {
         hostedZoneID: process.env?.HOSTED_ZONE_ID || "",
         hostedZoneName: "oleksiipopov.com",
         staticDomainName: "oleksiipopov.com"
+    },
+    REPORTING: {
+        bucketName: "web-perf-mon-reports",
+        temporaryBucketName: "web-perf-mon-reports-temp"
     }
 };
