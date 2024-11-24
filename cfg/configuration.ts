@@ -8,7 +8,8 @@ export default {
     HOSTING: {
         hostedZoneID: process.env?.HOSTED_ZONE_ID || "",
         hostedZoneName: "oleksiipopov.com",
-        staticDomainName: "oleksiipopov.com"
+        staticDomainName: "oleksiipopov.com",
+        apiDomainName: "task.perf-mon.examples.oleksiipopov.com"
     },
     REPORTING: {
         bucketName: "web-perf-mon-reports",
