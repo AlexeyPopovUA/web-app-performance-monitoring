@@ -1,5 +1,7 @@
-// @ts-ignore
-export async function handler(initialState): Promise<unknown> {
+import {AnalysisInitiatorOutput} from "../../types/AnalysisInitiatorOutput";
+import {AnalysisInitiatorInput} from "../../types/AnalysisInitiatorInput";
+
+export async function handler(initialState: AnalysisInitiatorInput): Promise<AnalysisInitiatorOutput> {
   console.log('initiator', initialState);
 
   // TODO: Convert incoming tasks object into a Fargate Task Run definition, compatible with the fargate task runner step

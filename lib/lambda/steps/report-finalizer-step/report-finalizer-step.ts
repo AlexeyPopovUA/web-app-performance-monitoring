@@ -1,10 +1,11 @@
 import {S3} from '@aws-sdk/client-s3';
+import {ReportFinalizerInput} from "../../types/ReportFinalizerInput";
+import {ReportFinalizerOutput} from "../../types/ReportFinalizerOutput";
+
+const s3 = new S3();
 
 // @ts-ignore
-export async function handler(initialState): Promise<unknown> {
-  console.log('finalizer', initialState);
-
-  const s3 = new S3();
+export async function handler(initialState: ReportFinalizerInput): Promise<ReportFinalizerOutput> {
   const sourceBucket = process.env.TEMPORARY_BUCKET_NAME;
   const destinationBucket = process.env.REPORT_BUCKET_NAME;
 
@@ -18,8 +19,6 @@ export async function handler(initialState): Promise<unknown> {
       const copySource = `${sourceBucket}/${Key}`;
       const destinationKey = Key.replace(prefix, '');
 
-      console.log('Copying', copySource, 'to', destinationKey);
-
       await s3.copyObject({
         CopySource: copySource,
         Bucket: destinationBucket,
@@ -31,8 +30,6 @@ export async function handler(initialState): Promise<unknown> {
   copyPromises && await Promise.all(copyPromises);
 
   return {
-    ...initialState,
-    // TODO Remove the debugging info later
-    listObjects
+    ...initialState
   };
 }

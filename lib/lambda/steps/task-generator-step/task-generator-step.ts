@@ -1,22 +1,12 @@
-import {CommonTaskProps, TaskPayload} from "../../types/TaskPayload";
+import {TaskGeneratorStepInput} from "../../types/TaskGeneratorStepInput";
+import {TaskGeneratorOutput} from "../../types/TaskGeneratorOutput";
 
-type SingleAnalysisJob = CommonTaskProps & {
-  shortPageName: string;
-  url: string;
-  iterations: number;
-  browser: string;
-}
-
-type GeneratedTaskState = TaskPayload & {
-  concurrentTasks: SingleAnalysisJob[];
-};
-
-export async function handler(initialState: TaskPayload): Promise<GeneratedTaskState> {
-  console.log('initialState', initialState);
-
+export async function handler(initialState: TaskGeneratorStepInput): Promise<TaskGeneratorOutput> {
   return {
+    // preserve the initial state
     ...initialState,
-    concurrentTasks: initialState.urls.reduce<GeneratedTaskState['concurrentTasks']>((acc, item) => {
+    // generate concurrent tasks
+    concurrentTasks: initialState.variants.reduce<TaskGeneratorOutput['concurrentTasks']>((acc, item) => {
       // split concurrent tasks by browsers
       item.browsers.forEach(browser => {
         acc.push({
