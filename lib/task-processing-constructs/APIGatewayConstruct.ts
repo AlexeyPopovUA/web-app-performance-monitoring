@@ -3,7 +3,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import {Queue} from "aws-cdk-lib/aws-sqs/lib/queue";
 import {RetentionDays} from "aws-cdk-lib/aws-logs";
-import {ARecord, HostedZone, RecordTarget} from "aws-cdk-lib/aws-route53";
+import {AaaaRecord, ARecord, HostedZone, RecordTarget} from "aws-cdk-lib/aws-route53";
 import {Certificate, CertificateValidation} from "aws-cdk-lib/aws-certificatemanager";
 import {ApiGatewayDomain} from "aws-cdk-lib/aws-route53-targets";
 
@@ -52,5 +52,17 @@ export class APIGatewayConstruct extends Construct {
     });
 
     apiDomainName.addBasePathMapping(api);
+
+    new ARecord(this, `${configuration.COMMON.project}-api-domain-name-alias-record`, {
+      recordName: configuration.HOSTING.apiDomainName,
+      zone: hostedZone,
+      target: RecordTarget.fromAlias(new ApiGatewayDomain(apiDomainName))
+    });
+
+    new AaaaRecord(this, `${configuration.COMMON.project}-api-domain-name-alias-record-ipv6`, {
+      recordName: configuration.HOSTING.apiDomainName,
+      zone: hostedZone,
+      target: RecordTarget.fromAlias(new ApiGatewayDomain(apiDomainName))
+    })
   }
 }

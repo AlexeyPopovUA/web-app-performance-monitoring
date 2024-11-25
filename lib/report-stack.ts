@@ -76,11 +76,13 @@ export class ReportStack extends cdk.Stack {
     });
 
     new ARecord(this, `${configuration.COMMON.project}-reports-a-record`, {
+      recordName: configuration.REPORTING.reportsDomainName,
       zone: hostedZone,
       target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))
     });
 
     new AaaaRecord(this, `${configuration.COMMON.project}-reports-aaaa-record`, {
+      recordName: configuration.REPORTING.reportsDomainName,
       zone: hostedZone,
       target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))
     });
