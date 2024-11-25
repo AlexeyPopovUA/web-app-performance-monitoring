@@ -27,28 +27,28 @@ export class StateMachineConstruct extends Construct {
     const startState = new sfn.Pass(this, `${configuration.COMMON.project}-start-state`);
 
     const taskGeneratorLambda = new lambda.Function(this, `${configuration.COMMON.project}-task-generator`, {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       logRetention: RetentionDays.ONE_DAY,
       handler: 'task-generator-step.handler',
       code: lambda.Code.fromAsset('dist/steps/task-generator-step')
     });
 
     const analysisInitiatorLambda = new lambda.Function(this, `${configuration.COMMON.project}-analysis-initiator`, {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       logRetention: RetentionDays.ONE_DAY,
       handler: 'analysis-initiator-step.handler',
       code: lambda.Code.fromAsset('dist/steps/analysis-initiator-step')
     });
 
     const cleanupLambda = new lambda.Function(this, `${configuration.COMMON.project}-cleanup`, {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       logRetention: RetentionDays.ONE_DAY,
       handler: 'cleanup-step.handler',
       code: lambda.Code.fromAsset('dist/steps/cleanup-step')
     });
 
     this.reportFinalizerLambda = new lambda.Function(this, `${configuration.COMMON.project}-report-finalizer`, {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       logRetention: RetentionDays.ONE_DAY,
       handler: 'report-finalizer-step.handler',
       code: lambda.Code.fromAsset('dist/steps/report-finalizer-step'),

@@ -22,7 +22,7 @@ export class SqsConstruct extends Construct {
 
     // Create Lambda function for polling SQS
     this.sqsTaskHandler = new lambda.Function(this, `${configuration.COMMON.project}-sqs-task-handler`, {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       logRetention: RetentionDays.ONE_DAY,
       handler: 'sqs-task-handler.handler',
       code: lambda.Code.fromAsset('dist/sqs-task-handler'),

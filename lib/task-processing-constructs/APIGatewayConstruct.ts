@@ -15,7 +15,7 @@ export class APIGatewayConstruct extends Construct {
 
     // Create Lambda function for handling API requests
     const gatewayProxyHandler = new lambda.Function(this, `${configuration.COMMON.project}-gateway-proxy-handler`, {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'gateway-proxy-handler.handler',
       logRetention: RetentionDays.ONE_DAY,
       code: lambda.Code.fromAsset('dist/gateway-proxy-handler'),

@@ -5,7 +5,7 @@
     "web-app-performance-monitoring": "bin/web-app-performance-monitoring.js"
   },
   "scripts": {
-    "build": "esbuild lib/lambda/**/*.ts lib/lambda/steps/**/*.ts --bundle --platform=node --target=es2020 --outdir=dist --external:@aws-sdk/*",
+    "build": "esbuild lib/lambda/**/*.ts lib/lambda/steps/**/*.ts --bundle --platform=node --target=node22 --outdir=dist --external:@aws-sdk/*",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk"
