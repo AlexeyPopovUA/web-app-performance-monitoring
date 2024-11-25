@@ -51,7 +51,11 @@ export class StateMachineConstruct extends Construct {
       runtime: lambda.Runtime.NODEJS_20_X,
       logRetention: RetentionDays.ONE_DAY,
       handler: 'report-finalizer-step.handler',
-      code: lambda.Code.fromAsset('dist/steps/report-finalizer-step')
+      code: lambda.Code.fromAsset('dist/steps/report-finalizer-step'),
+      environment: {
+        REPORT_BUCKET_NAME: configuration.REPORTING.bucketName,
+        TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName
+      }
     });
 
     temporaryReportBucket.grantRead(this.reportFinalizerLambda);
