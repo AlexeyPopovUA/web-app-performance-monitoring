@@ -4,7 +4,7 @@ import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import {BlockPublicAccess, Bucket} from "aws-cdk-lib/aws-s3";
-import {RemovalPolicy} from "aws-cdk-lib/core";
+import {Duration, RemovalPolicy} from "aws-cdk-lib/core";
 import {RetentionDays} from "aws-cdk-lib/aws-logs";
 
 import configuration from "../../cfg/configuration";
@@ -52,6 +52,7 @@ export class StateMachineConstruct extends Construct {
       logRetention: RetentionDays.ONE_DAY,
       handler: 'report-finalizer-step.handler',
       code: lambda.Code.fromAsset('dist/steps/report-finalizer-step'),
+      timeout: Duration.minutes(2),
       environment: {
         REPORT_BUCKET_NAME: configuration.REPORTING.bucketName,
         TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName
