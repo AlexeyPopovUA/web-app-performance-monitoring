@@ -31,7 +31,7 @@ Content-Type: application/json
 
 # Invalid JSON payload
 
-POST https://nh3mp4cs87.execute-api.eu-west-1.amazonaws.com/prod/request
+POST https://task.perf-mon.examples.oleksiipopov.com/request
 Content-Type: application/json
 
 {bla}
@@ -40,7 +40,7 @@ Content-Type: application/json
 
 # Validation error
 
-POST https://nh3mp4cs87.execute-api.eu-west-1.amazonaws.com/prod/request
+POST https://task.perf-mon.examples.oleksiipopov.com/request
 Content-Type: application/json
 
 {
