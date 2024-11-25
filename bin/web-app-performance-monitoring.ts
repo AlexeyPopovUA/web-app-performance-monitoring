@@ -5,8 +5,25 @@ import * as cdk from 'aws-cdk-lib';
 import {WebAppPerformanceMonitoringStack} from '../lib/web-app-performance-monitoring-stack';
 import {TaskProcessingStack} from "../lib/task-processing-stack";
 import {ReportStack} from "../lib/report-stack";
+import configuration from "../cfg/configuration";
 
 const app = new cdk.App();
-new WebAppPerformanceMonitoringStack(app, 'WebAppPerformanceMonitoringStack', {});
-new TaskProcessingStack(app, 'TaskProcessingStack', {});
-new ReportStack(app, 'ReportStack', {bucketClients: {finalReportWriter: undefined}});
+new WebAppPerformanceMonitoringStack(app, 'WebAppPerformanceMonitoringStack', {
+  env: {
+    account: configuration.COMMON.account,
+    region: configuration.COMMON.region
+  }
+});
+new TaskProcessingStack(app, 'TaskProcessingStack', {
+  env: {
+    account: configuration.COMMON.account,
+    region: configuration.COMMON.region
+  }
+});
+new ReportStack(app, 'ReportStack', {
+  bucketClients: {finalReportWriter: undefined},
+  env: {
+    account: configuration.COMMON.account,
+    region: configuration.COMMON.region
+  }
+});
