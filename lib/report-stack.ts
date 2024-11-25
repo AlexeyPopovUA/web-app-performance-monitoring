@@ -1,6 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import {Construct} from 'constructs';
-import {IFunction} from "aws-cdk-lib/aws-lambda";
 import {BlockPublicAccess, Bucket} from "aws-cdk-lib/aws-s3";
 import {
   AllowedMethods, CachedMethods,
@@ -13,13 +12,14 @@ import {S3BucketOrigin} from "aws-cdk-lib/aws-cloudfront-origins";
 import {Certificate, CertificateValidation} from "aws-cdk-lib/aws-certificatemanager";
 import {AaaaRecord, ARecord, HostedZone, RecordTarget} from "aws-cdk-lib/aws-route53";
 import {CloudFrontTarget} from "aws-cdk-lib/aws-route53-targets";
+import {IRole} from "aws-cdk-lib/aws-iam";
 
 import configuration from "../cfg/configuration";
 
 type ReportStackProps = cdk.StackProps & {
   bucketClients: {
     // receives read/write permissions to the bucket
-    finalReportWriter?: IFunction;
+    finalReportWriterRole?: IRole;
   }
 }
 
@@ -34,7 +34,7 @@ export class ReportStack extends cdk.Stack {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL
     });
 
-    props.bucketClients.finalReportWriter && reportBucket.grantWrite(props.bucketClients.finalReportWriter);
+    props.bucketClients.finalReportWriterRole && reportBucket.grantWrite(props.bucketClients.finalReportWriterRole);
 
     const originAccessIdentity = new OriginAccessIdentity(this, `${configuration.COMMON.project}-reports-origin-access-identity`);
     reportBucket.grantRead(originAccessIdentity);

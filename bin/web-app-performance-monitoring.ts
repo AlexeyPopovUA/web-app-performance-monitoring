@@ -8,20 +8,25 @@ import {ReportStack} from "../lib/report-stack";
 import configuration from "../cfg/configuration";
 
 const app = new cdk.App();
+
 new WebAppPerformanceMonitoringStack(app, 'WebAppPerformanceMonitoringStack', {
   env: {
     account: configuration.COMMON.account,
     region: configuration.COMMON.region
   }
 });
-new TaskProcessingStack(app, 'TaskProcessingStack', {
+
+const taskProcessingStack = new TaskProcessingStack(app, 'TaskProcessingStack', {
   env: {
     account: configuration.COMMON.account,
     region: configuration.COMMON.region
   }
 });
+
 new ReportStack(app, 'ReportStack', {
-  bucketClients: {finalReportWriter: undefined},
+  bucketClients: {
+    finalReportWriterRole: taskProcessingStack.finalizerRole
+  },
   env: {
     account: configuration.COMMON.account,
     region: configuration.COMMON.region
