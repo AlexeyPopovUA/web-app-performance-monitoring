@@ -15,5 +15,9 @@ export default {
         bucketName: "web-perf-mon-reports",
         temporaryBucketName: "web-perf-mon-reports-temp",
         reportsDomainName: "reports.perf-mon.examples.oleksiipopov.com"
+    },
+    ANALYSIS: {
+        clusterName: 'web-perf-mon-cluster',
+        taskFamily: 'web-perf-mon-task-family-sitespeedio'
     }
 };

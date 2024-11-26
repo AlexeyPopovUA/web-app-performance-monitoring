@@ -2,14 +2,14 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 
-import {WebAppPerformanceMonitoringStack} from '../lib/web-app-performance-monitoring-stack';
+import {AnalysisExecutionStack} from '../lib/analysis-execution-stack';
 import {TaskProcessingStack} from "../lib/task-processing-stack";
 import {ReportStack} from "../lib/report-stack";
 import configuration from "../cfg/configuration";
 
 const app = new cdk.App();
 
-new WebAppPerformanceMonitoringStack(app, 'WebAppPerformanceMonitoringStack', {
+new AnalysisExecutionStack(app, 'AnalysisExecutionStack', {
   env: {
     account: configuration.COMMON.account,
     region: configuration.COMMON.region
