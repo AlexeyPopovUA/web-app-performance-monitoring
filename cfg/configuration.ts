@@ -19,5 +19,9 @@ export default {
     ANALYSIS: {
         clusterName: 'web-perf-mon-cluster',
         taskFamily: 'web-perf-mon-task-family-sitespeedio'
+    },
+    NETWORKING: {
+        vpcId: "vpc-fbcab982",
+        availabilityZones: ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"],
     }
 };

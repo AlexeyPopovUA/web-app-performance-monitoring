@@ -10,6 +10,12 @@ export class AnalysisExecutionStack extends cdk.Stack {
     super(scope, id, props);
 
     // Create a VPC
+    const vpc = ec2.Vpc.fromVpcAttributes(this, `${configuration.COMMON.project}-ecs-vpc`, {
+      availabilityZones: configuration.NETWORKING.availabilityZones,
+      vpcId: configuration.NETWORKING.vpcId,
+      region: props!.env!.region,
+    });
+
     // const vpc = new ec2.Vpc(this, `${configuration.COMMON.project}-ecs-vpc`, {
     //   maxAzs: 2
     // });
@@ -17,7 +23,7 @@ export class AnalysisExecutionStack extends cdk.Stack {
     // Create an ECS cluster
     new ecs.Cluster(this, `${configuration.COMMON.project}-ecs-cluster`, {
       clusterName: configuration.ANALYSIS.clusterName,
-      //vpc
+      vpc
     });
 
     // Define a task definition
@@ -32,7 +38,8 @@ export class AnalysisExecutionStack extends cdk.Stack {
       image: ecs.ContainerImage.fromRegistry('sitespeedio/sitespeed.io:35.6.1'),
       memoryLimitMiB: 8192,
       cpu: 4096,
-      command: ['/start.sh', '--help']
+      //command: ['/start.sh', '--help']
+      command: ['echo "Hello, World!"']
     });
   }
 }
