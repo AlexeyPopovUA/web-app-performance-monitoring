@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import {Secret} from "aws-cdk-lib/aws-secretsmanager";
 
 import configuration from "../cfg/configuration";
 
@@ -41,15 +42,21 @@ export class AnalysisExecutionStack extends cdk.Stack {
       family: configuration.ANALYSIS.taskFamily,
       cpu: 4096,
       memoryLimitMiB: 8192,
+
     });
+
+    // Create a Docker Hub secret
+    const dockerHubSecret = Secret.fromSecretNameV2(this, 'DockerHubSecret', 'docker-hub-secret');
 
     // Add container to the task definition
     taskDefinition.addContainer(`${configuration.COMMON.project}-sitespeedio-container`, {
-      image: ecs.ContainerImage.fromRegistry('sitespeedio/sitespeed.io:35.6.1'),
+      image: ecs.ContainerImage.fromRegistry('sitespeedio/sitespeed.io:35.6.1', {
+        credentials: dockerHubSecret
+      }),
       memoryLimitMiB: 8192,
       cpu: 4096,
       //command: ['/start.sh', '--help']
-      command: ['echo "Hello, World!"']
+      command: ['echo "Hello, World!"'],
     });
   }
 }
