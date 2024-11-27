@@ -10,15 +10,25 @@ export class AnalysisExecutionStack extends cdk.Stack {
     super(scope, id, props);
 
     // Create a VPC
-    const vpc = ec2.Vpc.fromVpcAttributes(this, `${configuration.COMMON.project}-ecs-vpc`, {
-      availabilityZones: configuration.NETWORKING.availabilityZones,
-      vpcId: configuration.NETWORKING.vpcId,
-      region: props!.env!.region,
-    });
-
-    // const vpc = new ec2.Vpc(this, `${configuration.COMMON.project}-ecs-vpc`, {
-    //   maxAzs: 2
+    // const vpc = ec2.Vpc.fromVpcAttributes(this, `${configuration.COMMON.project}-ecs-vpc`, {
+    //   availabilityZones: configuration.NETWORKING.availabilityZones,
+    //   vpcId: configuration.NETWORKING.vpcId,
+    //   region: props!.env!.region,
     // });
+
+    const vpc = new ec2.Vpc(this, `${configuration.COMMON.project}-ecs-vpc`, {
+      maxAzs: 2,
+      subnetConfiguration: [
+        {
+          name: 'public',
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+        {
+          name: 'private',
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        }
+      ]
+    });
 
     // Create an ECS cluster
     new ecs.Cluster(this, `${configuration.COMMON.project}-ecs-cluster`, {
