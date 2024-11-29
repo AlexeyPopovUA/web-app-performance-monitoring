@@ -31,6 +31,12 @@ export class AnalysisExecutionStack extends cdk.Stack {
       ]
     });
 
+    // security group with all outbound traffic allowed
+    new ec2.SecurityGroup(this, `${configuration.COMMON.project}-ecs-sg`, {
+      vpc,
+      allowAllOutbound: true,
+    });
+
     // Create an ECS cluster
     new ecs.Cluster(this, `${configuration.COMMON.project}-ecs-cluster`, {
       clusterName: configuration.ANALYSIS.clusterName,
