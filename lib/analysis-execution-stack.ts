@@ -83,7 +83,7 @@ export class AnalysisExecutionStack extends cdk.Stack {
       memoryLimitMiB: 8192,
       cpu: 4096,
       //command: ['/start.sh', '--help']
-      command: ['echo "Hello, World!"'],
+      command: ['echo', 'Hello, World!'],
     });
   }
 }
