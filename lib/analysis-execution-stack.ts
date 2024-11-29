@@ -3,10 +3,10 @@ import {Construct} from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import {Secret} from "aws-cdk-lib/aws-secretsmanager";
-
-import configuration from "../cfg/configuration";
 import {PolicyStatement, Role, ServicePrincipal} from "aws-cdk-lib/aws-iam";
 import {RetentionDays} from "aws-cdk-lib/aws-logs";
+
+import configuration from "../cfg/configuration";
 
 export class AnalysisExecutionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -84,7 +84,8 @@ export class AnalysisExecutionStack extends cdk.Stack {
       memoryLimitMiB: 8192,
       cpu: 4096,
       //command: ['/start.sh', '--help']
-      command: ['echo', 'Hello, World!'],
+      //command: ['echo', 'Hello, World!'],
+      command: ['https://oleksiipopov.com', '--summary'],
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: `${configuration.COMMON.project}-sitespeedio-container`,
         logRetention: RetentionDays.ONE_DAY
