@@ -6,6 +6,7 @@ import {Secret} from "aws-cdk-lib/aws-secretsmanager";
 
 import configuration from "../cfg/configuration";
 import {PolicyStatement, Role, ServicePrincipal} from "aws-cdk-lib/aws-iam";
+import {RetentionDays} from "aws-cdk-lib/aws-logs";
 
 export class AnalysisExecutionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -84,6 +85,10 @@ export class AnalysisExecutionStack extends cdk.Stack {
       cpu: 4096,
       //command: ['/start.sh', '--help']
       command: ['echo', 'Hello, World!'],
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: `${configuration.COMMON.project}-sitespeedio-container`,
+        logRetention: RetentionDays.ONE_DAY
+      }),
     });
   }
 }
