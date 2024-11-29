@@ -13,11 +13,11 @@ export class AnalysisExecutionStack extends cdk.Stack {
     super(scope, id, props);
 
     // Create a VPC
-    // const vpc = ec2.Vpc.fromVpcAttributes(this, `${configuration.COMMON.project}-ecs-vpc`, {
-    //   availabilityZones: configuration.NETWORKING.availabilityZones,
-    //   vpcId: configuration.NETWORKING.vpcId,
-    //   region: props!.env!.region,
-    // });
+    const defaultVpc = ec2.Vpc.fromVpcAttributes(this, `${configuration.COMMON.project}-ecs-vpc-default`, {
+      availabilityZones: configuration.NETWORKING.availabilityZones,
+      vpcId: configuration.NETWORKING.vpcId,
+      region: props!.env!.region,
+    });
 
     const vpc = new ec2.Vpc(this, `${configuration.COMMON.project}-ecs-vpc`, {
       maxAzs: 2,
@@ -36,6 +36,12 @@ export class AnalysisExecutionStack extends cdk.Stack {
     // security group with all outbound traffic allowed
     new ec2.SecurityGroup(this, `${configuration.COMMON.project}-ecs-sg`, {
       vpc,
+      allowAllOutbound: true,
+    });
+
+    new ec2.SecurityGroup(this, `${configuration.COMMON.project}-ecs-sg-def`, {
+      securityGroupName: `${configuration.COMMON.project}-ecs-sg-def`,
+      vpc: defaultVpc,
       allowAllOutbound: true,
     });
 
@@ -83,8 +89,6 @@ export class AnalysisExecutionStack extends cdk.Stack {
       }),
       memoryLimitMiB: 8192,
       cpu: 4096,
-      //command: ['/start.sh', '--help']
-      //command: ['echo', 'Hello, World!'],
       command: ['https://oleksiipopov.com', '--summary'],
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: `${configuration.COMMON.project}-sitespeedio-container`,
