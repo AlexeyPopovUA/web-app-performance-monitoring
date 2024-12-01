@@ -22,5 +22,7 @@ export default {
   },
   NETWORKING: {
     securityGroupName: `web-perf-mon-ecs-sg`,
+    // NAT gateway and public IP for the NAT gateway are expensive things for a home lab
+    deployNetwork: process.env?.DEPLOY_NETWORK === "true" || false,
   }
 };

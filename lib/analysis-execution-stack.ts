@@ -10,32 +10,34 @@ export class AnalysisExecutionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const vpc = new ec2.Vpc(this, `${configuration.COMMON.project}-ecs-vpc`, {
-      maxAzs: 2,
-      subnetConfiguration: [
-        {
-          name: 'public',
-          subnetType: ec2.SubnetType.PUBLIC,
-        },
-        {
-          name: 'private',
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-        }
-      ]
-    });
+    if (configuration.NETWORKING.deployNetwork) {
+      const vpc = new ec2.Vpc(this, `${configuration.COMMON.project}-ecs-vpc`, {
+        maxAzs: 2,
+        subnetConfiguration: [
+          {
+            name: 'public',
+            subnetType: ec2.SubnetType.PUBLIC,
+          },
+          {
+            name: 'private',
+            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+          }
+        ]
+      });
 
-    // security group with all outbound traffic allowed
-    new ec2.SecurityGroup(this, `${configuration.COMMON.project}-ecs-sg`, {
-      securityGroupName: configuration.NETWORKING.securityGroupName,
-      vpc,
-      allowAllOutbound: true,
-    });
+      // security group with all outbound traffic allowed
+      new ec2.SecurityGroup(this, `${configuration.COMMON.project}-ecs-sg`, {
+        securityGroupName: configuration.NETWORKING.securityGroupName,
+        vpc,
+        allowAllOutbound: true,
+      });
 
-    // Create an ECS cluster
-    new ecs.Cluster(this, `${configuration.COMMON.project}-ecs-cluster`, {
-      clusterName: configuration.ANALYSIS.clusterName,
-      vpc
-    });
+      // Create an ECS cluster
+      new ecs.Cluster(this, `${configuration.COMMON.project}-ecs-cluster`, {
+        clusterName: configuration.ANALYSIS.clusterName,
+        vpc
+      });
+    }
 
     // Define a task definition
     const taskDefinition = new ecs.FargateTaskDefinition(this, `${configuration.COMMON.project}-sitespeedio-task-def`, {
