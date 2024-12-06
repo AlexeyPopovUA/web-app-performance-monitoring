@@ -10,7 +10,7 @@ const taskSchema = object({
   baseUrl: string().required(),
   environment: string().required(),
   gitBranchOrTag: string().optional(),
-  urls: array().of(
+  variants: array().of(
     object({
       shortPageName: string().required(),
       url: string().required(),
