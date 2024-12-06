@@ -115,8 +115,6 @@ export class StateMachineConstruct extends Construct {
     // TODO: Task to process each item in the map state. Initiates and waits a Fargate task to finish
     // TODO: sitespeed.io uploads a single report to an S3 directory
     // TODO: sitespeed.io sends metrics to Grafana cloud
-    //const fargateTaskRunner = new sfn.Pass(this, `${configuration.COMMON.project}-run-fargate-task`);
-
     const fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       securityGroups: [

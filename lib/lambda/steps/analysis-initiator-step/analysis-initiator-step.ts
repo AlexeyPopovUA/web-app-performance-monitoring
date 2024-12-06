@@ -9,6 +9,13 @@ export async function handler(initialState: AnalysisInitiatorInput): Promise<Ana
   return {
     ...initialState,
     // todo Implement the command generation
-    command: ["echo", "'Hello world'"]
+    command: [
+      initialState.url, // todo Think about an array of URLs
+      '--browser', initialState.browser,
+      '--iterations', initialState.iterations.toString(),
+      '--urlAlias', initialState.shortPageName,
+
+      '--summary'
+    ],
   };
 }

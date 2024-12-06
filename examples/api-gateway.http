@@ -1,8 +1,30 @@
 #######
 
+# Valid simple single request
+
+POST https://task.perf-mon.examples.oleksiipopov.com/request
+Content-Type: application/json
+
+{
+  "projectName": "ExampleProject",
+  "baseUrl": "https://example.com",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "variants": [
+    {
+      "shortPageName": "ContactPage",
+      "url": "https://example.com/contact",
+      "iterations": 3,
+      "browsers": ["chrome"]
+    }
+  ]
+}
+
+
+#######
+
 # Valid request
 
-#POST https://nh3mp4cs87.execute-api.eu-west-1.amazonaws.com/prod/request
 POST https://task.perf-mon.examples.oleksiipopov.com/request
 Content-Type: application/json
 
