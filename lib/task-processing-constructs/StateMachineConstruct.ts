@@ -115,29 +115,30 @@ export class StateMachineConstruct extends Construct {
     // TODO: Task to process each item in the map state. Initiates and waits a Fargate task to finish
     // TODO: sitespeed.io uploads a single report to an S3 directory
     // TODO: sitespeed.io sends metrics to Grafana cloud
-    const fargateTaskRunner = new sfn.Pass(this, `${configuration.COMMON.project}-run-fargate-task`);
+    //const fargateTaskRunner = new sfn.Pass(this, `${configuration.COMMON.project}-run-fargate-task`);
 
-    // const fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
-    //   integrationPattern: sfn.IntegrationPattern.RUN_JOB,
-    //   securityGroups: [
-    //     props.securityGroup
-    //   ],
-    //   subnets: {
-    //     subnetType: SubnetType.PRIVATE_WITH_EGRESS
-    //   },
-    //   cluster: Cluster.fromClusterAttributes(this, 'Cluster', {
-    //     clusterName: configuration.ANALYSIS.clusterName,
-    //     vpc: props.vpc
-    //   }),
-    //   taskDefinition,
-    //   launchTarget: new tasks.EcsFargateLaunchTarget({platformVersion: FargatePlatformVersion.LATEST}),
-    //   assignPublicIp: false,
-    //   containerOverrides: [{
-    //     containerDefinition,
-    //     command: sfn.JsonPath.listAt('$.command')
-    //   }],
-    //   resultPath: '$.taskResult'
-    // });
+    const fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
+      integrationPattern: sfn.IntegrationPattern.RUN_JOB,
+      securityGroups: [
+        props.securityGroup
+      ],
+      subnets: {
+        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+        availabilityZones: ["us-east-1a"],
+      },
+      cluster: Cluster.fromClusterAttributes(this, 'Cluster', {
+        clusterName: configuration.ANALYSIS.clusterName,
+        vpc: props.vpc
+      }),
+      taskDefinition,
+      launchTarget: new tasks.EcsFargateLaunchTarget({platformVersion: FargatePlatformVersion.LATEST}),
+      assignPublicIp: false,
+      containerOverrides: [{
+        containerDefinition,
+        command: sfn.JsonPath.listAt('$.command')
+      }],
+      resultPath: '$.taskResult'
+    });
 
     // Finalizer step to send email notifications
     const finalizeReport = new tasks.LambdaInvoke(this, `${configuration.COMMON.project}-finalize-report`, {
