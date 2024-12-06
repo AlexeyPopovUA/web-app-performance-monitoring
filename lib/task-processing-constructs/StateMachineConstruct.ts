@@ -2,18 +2,31 @@ import {Construct} from 'constructs';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import {IFunction} from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import {BlockPublicAccess, Bucket} from "aws-cdk-lib/aws-s3";
 import {Duration, RemovalPolicy} from "aws-cdk-lib/core";
 import {RetentionDays} from "aws-cdk-lib/aws-logs";
+import * as ecs from "aws-cdk-lib/aws-ecs";
+import {Cluster, FargatePlatformVersion} from "aws-cdk-lib/aws-ecs";
+import {ISecurityGroup, IVpc, SecurityGroup, SubnetType} from "aws-cdk-lib/aws-ec2";
 
 import configuration from "../../cfg/configuration";
-import {IFunction} from "aws-cdk-lib/aws-lambda";
+
+type Props = {
+  sqsTaskHandler: lambda.Function;
+  env: {
+    region: string;
+    account: string;
+  },
+  vpc: IVpc;
+  securityGroup: ISecurityGroup;
+}
 
 export class StateMachineConstruct extends Construct {
   public readonly reportFinalizerLambda: IFunction;
 
-  constructor(scope: Construct, id: string, sqsTaskHandler: lambda.Function) {
+  constructor(scope: Construct, id: string, props: Props) {
     super(scope, id);
 
     const temporaryReportBucket = new Bucket(this, `${configuration.COMMON.project}-temporary-report-bucket`, {
@@ -80,10 +93,51 @@ export class StateMachineConstruct extends Construct {
       outputPath: '$.Payload'
     });
 
+    // Define a task definition
+    const taskDefinition = new ecs.FargateTaskDefinition(this, `${configuration.COMMON.project}-sitespeedio-task-def`, {
+      family: configuration.ANALYSIS.taskFamily,
+      cpu: 4096,
+      memoryLimitMiB: 8192,
+    });
+
+    // Add container to the task definition
+    const containerDefinition = taskDefinition.addContainer(`${configuration.COMMON.project}-sitespeedio-container`, {
+      image: ecs.ContainerImage.fromRegistry('sitespeedio/sitespeed.io:35.6.1'),
+      memoryLimitMiB: 8192,
+      cpu: 4096,
+      command: ['https://oleksiipopov.com', '--summary'],
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: `${configuration.COMMON.project}-sitespeedio-container`,
+        logRetention: RetentionDays.ONE_DAY
+      }),
+    });
+
     // TODO: Task to process each item in the map state. Initiates and waits a Fargate task to finish
     // TODO: sitespeed.io uploads a single report to an S3 directory
     // TODO: sitespeed.io sends metrics to Grafana cloud
     const fargateTaskRunner = new sfn.Pass(this, `${configuration.COMMON.project}-run-fargate-task`);
+
+    // const fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
+    //   integrationPattern: sfn.IntegrationPattern.RUN_JOB,
+    //   securityGroups: [
+    //     props.securityGroup
+    //   ],
+    //   subnets: {
+    //     subnetType: SubnetType.PRIVATE_WITH_EGRESS
+    //   },
+    //   cluster: Cluster.fromClusterAttributes(this, 'Cluster', {
+    //     clusterName: configuration.ANALYSIS.clusterName,
+    //     vpc: props.vpc
+    //   }),
+    //   taskDefinition,
+    //   launchTarget: new tasks.EcsFargateLaunchTarget({platformVersion: FargatePlatformVersion.LATEST}),
+    //   assignPublicIp: false,
+    //   containerOverrides: [{
+    //     containerDefinition,
+    //     command: sfn.JsonPath.listAt('$.command')
+    //   }],
+    //   resultPath: '$.taskResult'
+    // });
 
     // Finalizer step to send email notifications
     const finalizeReport = new tasks.LambdaInvoke(this, `${configuration.COMMON.project}-finalize-report`, {
@@ -108,16 +162,16 @@ export class StateMachineConstruct extends Construct {
     });
 
     // Grant Lambda permissions to start Step Functions executions
-    stateMachine.grantStartExecution(sqsTaskHandler);
-    stateMachine.grantRead(sqsTaskHandler);
+    stateMachine.grantStartExecution(props.sqsTaskHandler);
+    stateMachine.grantRead(props.sqsTaskHandler);
 
     // Add IAM role for Lambda to list Step Functions executions
-    sqsTaskHandler.addToRolePolicy(new iam.PolicyStatement({
+    props.sqsTaskHandler.addToRolePolicy(new iam.PolicyStatement({
       actions: ['states:ListExecutions'],
       resources: [stateMachine.stateMachineArn]
     }));
 
     // Set environment variable for sqsTaskHandler
-    sqsTaskHandler.addEnvironment('STATE_MACHINE_ARN', stateMachine.stateMachineArn);
+    props.sqsTaskHandler.addEnvironment('STATE_MACHINE_ARN', stateMachine.stateMachineArn);
   }
 }

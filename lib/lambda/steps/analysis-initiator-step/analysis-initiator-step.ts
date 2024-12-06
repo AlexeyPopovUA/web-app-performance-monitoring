@@ -8,5 +8,7 @@ export async function handler(initialState: AnalysisInitiatorInput): Promise<Ana
 
   return {
     ...initialState,
+    // todo Implement the command generation
+    command: ["echo", "'Hello world'"]
   };
 }
