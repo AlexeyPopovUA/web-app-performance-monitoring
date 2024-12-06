@@ -16,7 +16,7 @@ Content-Type: application/json
       "urls": [
         "https://oleksiipopov.com/contact"
       ],
-      "iterations": 3,
+      "iterations": 1,
       "browsers": ["chrome"]
     }
   ]

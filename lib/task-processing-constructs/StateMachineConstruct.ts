@@ -50,7 +50,11 @@ export class StateMachineConstruct extends Construct {
       runtime: lambda.Runtime.NODEJS_22_X,
       logRetention: RetentionDays.ONE_DAY,
       handler: 'analysis-initiator-step.handler',
-      code: lambda.Code.fromAsset('dist/steps/analysis-initiator-step')
+      code: lambda.Code.fromAsset('dist/steps/analysis-initiator-step'),
+      environment: {
+        TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName,
+        TEMPORARY_BUCKET_REGION: props.env.region
+      }
     });
 
     const cleanupLambda = new lambda.Function(this, `${configuration.COMMON.project}-cleanup`, {
@@ -99,6 +103,8 @@ export class StateMachineConstruct extends Construct {
       cpu: 4096,
       memoryLimitMiB: 8192,
     });
+
+    taskDefinition.taskRole && temporaryReportBucket.grantReadWrite(taskDefinition.taskRole);
 
     // Add container to the task definition
     const containerDefinition = taskDefinition.addContainer(`${configuration.COMMON.project}-sitespeedio-container`, {
