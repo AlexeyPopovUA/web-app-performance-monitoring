@@ -12,8 +12,8 @@ const taskSchema = object({
   gitBranchOrTag: string().optional(),
   variants: array().of(
     object({
-      shortPageName: string().required(),
-      url: string().required(),
+      variantName: string().required(),
+      urls: array().of(string()).required(),
       iterations: number().required(),
       browsers: array().of(string()).required()
     })

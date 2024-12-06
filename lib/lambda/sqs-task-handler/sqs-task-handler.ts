@@ -11,7 +11,7 @@ export const handler: SQSHandler = async (event) => {
     console.log('SQSHandler body:', body);
 
     // Check for duplicate tasks (this is a placeholder, implement your own logic)
-    const isDuplicate = false; // Replace with actual duplicate check
+    const isDuplicate = false; // TODO Replace with actual duplicate check
 
     if (!isDuplicate) {
       const params = {

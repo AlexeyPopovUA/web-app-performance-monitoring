@@ -7,13 +7,15 @@ Content-Type: application/json
 
 {
   "projectName": "ExampleProject",
-  "baseUrl": "https://example.com",
+  "baseUrl": "https://oleksiipopov.com",
   "environment": "production",
   "gitBranchOrTag": "main",
   "variants": [
     {
-      "shortPageName": "ContactPage",
-      "url": "https://example.com/contact",
+      "variantName": "ContactPage",
+      "urls": [
+        "https://oleksiipopov.com/contact"
+      ],
       "iterations": 3,
       "browsers": ["chrome"]
     }
@@ -30,19 +32,23 @@ Content-Type: application/json
 
 {
   "projectName": "ExampleProject",
-  "baseUrl": "https://example.com",
+  "baseUrl": "https://oleksiipopov.com",
   "environment": "production",
   "gitBranchOrTag": "main",
   "variants": [
     {
-      "shortPageName": "HomePage",
-      "url": "https://example.com/home",
+      "variantName": "HomePage",
+      "urls": [
+        "https://oleksiipopov.com/"
+      ],
       "iterations": 5,
       "browsers": ["chrome", "firefox"]
     },
     {
-      "shortPageName": "ContactPage",
-      "url": "https://example.com/contact",
+      "variantName": "ContactPage",
+      "urls": [
+        "https://oleksiipopov.com/contact"
+      ],
       "iterations": 3,
       "browsers": ["chrome"]
     }
@@ -67,5 +73,5 @@ Content-Type: application/json
 
 {
   "projectName": "ExampleProject",
-  "baseUrl": "https://example.com"
+  "baseUrl": "https://oleksiipopov.com"
 }

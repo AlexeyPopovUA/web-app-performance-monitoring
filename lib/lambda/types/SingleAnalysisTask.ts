@@ -1,8 +1,8 @@
 import {CommonTaskProps} from "./CommoontTaskProps";
 
 export type SingleAnalysisTask = CommonTaskProps & {
-  shortPageName: string;
-  url: string;
+  variantName: string;
+  urls: string[];
   iterations: number;
   browser: string;
 }

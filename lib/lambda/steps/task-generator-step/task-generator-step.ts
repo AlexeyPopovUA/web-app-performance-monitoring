@@ -17,8 +17,8 @@ export async function handler(initialState: TaskGeneratorStepInput): Promise<Tas
           gitBranchOrTag: initialState.gitBranchOrTag,
 
           // specific
-          shortPageName: item.shortPageName,
-          url: item.url,
+          variantName: item.variantName,
+          urls: item.urls,
           iterations: item.iterations,
           browser: browser
         });

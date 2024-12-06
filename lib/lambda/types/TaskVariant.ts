@@ -1,6 +1,6 @@
 export type TaskVariant = {
-  shortPageName: string;
-  url: string;
+  variantName: string;
+  urls: string[];
   iterations: number;
   browsers: string[];
 }
