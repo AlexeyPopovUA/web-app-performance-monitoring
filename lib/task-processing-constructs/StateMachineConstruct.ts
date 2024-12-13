@@ -19,8 +19,10 @@ type Props = {
     region: string;
     account: string;
   },
-  vpc: IVpc;
-  securityGroup: ISecurityGroup;
+  networking?: {
+    vpc: IVpc;
+    securityGroup: ISecurityGroup;
+  }
 }
 
 export class StateMachineConstruct extends Construct {
@@ -118,40 +120,39 @@ export class StateMachineConstruct extends Construct {
       }),
     });
 
-
-    const vpc = Vpc.fromLookup(this, 'VPC', {
-      vpcName: configuration.NETWORKING.vpcName,
-      region: props.env.region
-    });
-
-    const securityGroup = SecurityGroup.fromLookupByName(this, 'SecurityGroup', configuration.NETWORKING.securityGroupName, vpc);
-
     // TODO: Task to process each item in the map state. Initiates and waits a Fargate task to finish
     // TODO: sitespeed.io uploads a single report to an S3 directory
     // TODO: sitespeed.io sends metrics to Grafana cloud
 
-    const fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
-      integrationPattern: sfn.IntegrationPattern.RUN_JOB,
-      securityGroups: [
-        securityGroup
-      ],
-      subnets: {
-        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
-        availabilityZones: ["us-east-1a"],
-      },
-      cluster: Cluster.fromClusterAttributes(this, 'Cluster', {
-        clusterName: configuration.ANALYSIS.clusterName,
-        vpc
-      }),
-      taskDefinition,
-      launchTarget: new tasks.EcsFargateLaunchTarget({platformVersion: FargatePlatformVersion.LATEST}),
-      assignPublicIp: false,
-      containerOverrides: [{
-        containerDefinition,
-        command: sfn.JsonPath.listAt('$.command')
-      }],
-      resultPath: '$.taskResult'
-    });
+    let fargateTaskRunner;
+
+    if (props.networking) {
+      fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
+        integrationPattern: sfn.IntegrationPattern.RUN_JOB,
+        securityGroups: [
+          props.networking.securityGroup
+        ],
+        subnets: {
+          subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+          availabilityZones: ["us-east-1a"],
+        },
+        cluster: Cluster.fromClusterAttributes(this, 'Cluster', {
+          clusterName: configuration.ANALYSIS.clusterName,
+          vpc: props.networking.vpc
+        }),
+        taskDefinition,
+        launchTarget: new tasks.EcsFargateLaunchTarget({platformVersion: FargatePlatformVersion.LATEST}),
+        assignPublicIp: false,
+        containerOverrides: [{
+          containerDefinition,
+          command: sfn.JsonPath.listAt('$.command')
+        }],
+        resultPath: '$.taskResult'
+      });
+    } else {
+      // mocked fargate task runner
+      fargateTaskRunner = new sfn.Pass(this, `${configuration.COMMON.project}-run-fargate-task`);
+    }
 
     // Finalizer step to send email notifications
     const finalizeReport = new tasks.LambdaInvoke(this, `${configuration.COMMON.project}-finalize-report`, {

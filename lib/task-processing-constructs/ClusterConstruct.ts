@@ -6,17 +6,21 @@ import {IVpc} from "aws-cdk-lib/aws-ec2";
 import configuration from "../../cfg/configuration";
 
 type ClusterConstructProps = cdk.StackProps & {
-  vpc: IVpc;
+  networking?: {
+    vpc: IVpc;
+  }
 }
 
 export class ClusterConstruct extends Construct {
   constructor(scope: Construct, id: string, props: ClusterConstructProps) {
     super(scope, id);
 
-    // Create an ECS cluster
-    new ecs.Cluster(this, `${configuration.COMMON.project}-ecs-cluster`, {
-      clusterName: configuration.ANALYSIS.clusterName,
-      vpc: props.vpc
-    });
+    if (props.networking) {
+      // Create an ECS cluster
+      new ecs.Cluster(this, `${configuration.COMMON.project}-ecs-cluster`, {
+        clusterName: configuration.ANALYSIS.clusterName,
+        vpc: props.networking.vpc
+      });
+    }
   }
 }

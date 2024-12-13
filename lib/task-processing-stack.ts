@@ -1,13 +1,13 @@
 import * as cdk from 'aws-cdk-lib';
 import {IRole} from "aws-cdk-lib/aws-iam";
 import {Construct} from 'constructs';
-import {ISecurityGroup, IVpc, SecurityGroup, Vpc} from "aws-cdk-lib/aws-ec2";
+import {SecurityGroup, Vpc} from "aws-cdk-lib/aws-ec2";
 
 import {SqsConstruct} from "./task-processing-constructs/SqsConstruct";
 import {APIGatewayConstruct} from "./task-processing-constructs/APIGatewayConstruct";
 import {StateMachineConstruct} from "./task-processing-constructs/StateMachineConstruct";
-import configuration from "../cfg/configuration";
 import {ClusterConstruct} from "./task-processing-constructs/ClusterConstruct";
+import configuration from "../cfg/configuration";
 
 type TaskProcessingStackProps = cdk.StackProps & {
   env: {
@@ -22,12 +22,16 @@ export class TaskProcessingStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: TaskProcessingStackProps) {
     super(scope, id, props);
 
-    const vpc = Vpc.fromLookup(this, 'VPC', {
-      vpcName: configuration.NETWORKING.vpcName,
-      region: props.env.region
-    });
+    let vpc, securityGroup;
 
-    const securityGroup = SecurityGroup.fromLookupByName(this, 'SecurityGroup', configuration.NETWORKING.securityGroupName, vpc);
+    if (configuration.NETWORKING.deployNetwork) {
+      vpc = Vpc.fromLookup(this, `${configuration.COMMON.project}-VPC`, {
+        vpcName: configuration.NETWORKING.vpcName,
+        region: props.env.region
+      });
+
+      securityGroup = SecurityGroup.fromLookupByName(this, `${configuration.COMMON.project}-SecurityGroup`, configuration.NETWORKING.securityGroupName, vpc);
+    }
 
     const sqsConstruct = new SqsConstruct(this, `${configuration.COMMON.project}-SqsConstruct`);
 
@@ -39,14 +43,18 @@ export class TaskProcessingStack extends cdk.Stack {
         region: props.env.region,
         account: props.env.account
       },
-      vpc,
-      securityGroup
+      networking: (vpc && securityGroup) ? {
+        vpc,
+        securityGroup
+      } : undefined
     });
 
     this.finalizerRole = stateMachineConstruction.reportFinalizerLambda.role;
 
     new ClusterConstruct(this, `${configuration.COMMON.project}-ClusterConstruct`, {
-      vpc
+      networking: vpc ? {
+        vpc
+      } : undefined
     })
   }
 }
