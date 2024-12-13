@@ -9,7 +9,7 @@ import {Duration, RemovalPolicy} from "aws-cdk-lib/core";
 import {RetentionDays} from "aws-cdk-lib/aws-logs";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import {Cluster, FargatePlatformVersion} from "aws-cdk-lib/aws-ecs";
-import {ISecurityGroup, IVpc, SecurityGroup, SubnetType} from "aws-cdk-lib/aws-ec2";
+import {ISecurityGroup, IVpc, SecurityGroup, SubnetType, Vpc} from "aws-cdk-lib/aws-ec2";
 
 import configuration from "../../cfg/configuration";
 
@@ -118,13 +118,22 @@ export class StateMachineConstruct extends Construct {
       }),
     });
 
+
+    const vpc = Vpc.fromLookup(this, 'VPC', {
+      vpcName: configuration.NETWORKING.vpcName,
+      region: props.env.region
+    });
+
+    const securityGroup = SecurityGroup.fromLookupByName(this, 'SecurityGroup', configuration.NETWORKING.securityGroupName, vpc);
+
     // TODO: Task to process each item in the map state. Initiates and waits a Fargate task to finish
     // TODO: sitespeed.io uploads a single report to an S3 directory
     // TODO: sitespeed.io sends metrics to Grafana cloud
+
     const fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       securityGroups: [
-        props.securityGroup
+        securityGroup
       ],
       subnets: {
         subnetType: SubnetType.PRIVATE_WITH_EGRESS,
@@ -132,7 +141,7 @@ export class StateMachineConstruct extends Construct {
       },
       cluster: Cluster.fromClusterAttributes(this, 'Cluster', {
         clusterName: configuration.ANALYSIS.clusterName,
-        vpc: props.vpc
+        vpc
       }),
       taskDefinition,
       launchTarget: new tasks.EcsFargateLaunchTarget({platformVersion: FargatePlatformVersion.LATEST}),

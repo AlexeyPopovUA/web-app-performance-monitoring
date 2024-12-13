@@ -21,9 +21,9 @@ const taskProcessingStack = new TaskProcessingStack(app, 'TaskProcessingStack', 
     account: configuration.COMMON.account,
     region: configuration.COMMON.region
   },
-  vpc: networkStack.vpc,
-  securityGroup: networkStack.securityGroup
 });
+
+networkStack.addDependency(taskProcessingStack);
 
 new ReportStack(app, 'ReportStack', {
   bucketClients: {
