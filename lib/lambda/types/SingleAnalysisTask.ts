@@ -5,4 +5,5 @@ export type SingleAnalysisTask = CommonTaskProps & {
   urls: string[];
   iterations: number;
   browser: string;
+  reportPath: string;
 }

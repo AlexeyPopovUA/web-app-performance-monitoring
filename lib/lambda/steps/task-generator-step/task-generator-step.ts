@@ -1,5 +1,6 @@
 import {TaskGeneratorStepInput} from "../../types/TaskGeneratorStepInput";
 import {TaskGeneratorOutput} from "../../types/TaskGeneratorOutput";
+import {getSingleReportBucketKeyByTask} from "../../../utils/utils";
 
 export async function handler(initialState: TaskGeneratorStepInput): Promise<TaskGeneratorOutput> {
   return {
@@ -9,7 +10,7 @@ export async function handler(initialState: TaskGeneratorStepInput): Promise<Tas
     concurrentTasks: initialState.variants.reduce<TaskGeneratorOutput['concurrentTasks']>((acc, item) => {
       // split concurrent tasks by browsers
       item.browsers.forEach(browser => {
-        acc.push({
+        const cfg = {
           // common
           projectName: initialState.projectName,
           baseUrl: initialState.baseUrl,
@@ -20,7 +21,13 @@ export async function handler(initialState: TaskGeneratorStepInput): Promise<Tas
           variantName: item.variantName,
           urls: item.urls,
           iterations: item.iterations,
-          browser: browser
+          browser: browser,
+        }
+
+        acc.push({
+          ...cfg,
+
+          reportPath: getSingleReportBucketKeyByTask(cfg)
         });
       });
       return acc;

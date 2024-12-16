@@ -12,6 +12,9 @@ export async function handler(initialState: ReportFinalizerInput): Promise<Repor
   // TODO Remove the hardcoded prefix later
   const prefix = 'nextjs-images/';
 
+  // todo
+  const copyJobs = initialState.concurrentTasks.map(({reportPath}) => reportPath);
+
   const listObjects = await s3.listObjectsV2({Bucket: sourceBucket, Prefix: prefix});
 
   const copyPromises = listObjects.Contents?.map(async ({Key}) => {
