@@ -1,5 +1,5 @@
-import {AnalysisInitiatorOutput} from "../../types/AnalysisInitiatorOutput";
-import {AnalysisInitiatorInput} from "../../types/AnalysisInitiatorInput";
+import {AnalysisInitiatorOutput} from "./AnalysisInitiatorOutput";
+import {AnalysisInitiatorInput} from "./AnalysisInitiatorInput";
 
 export async function handler(initialState: AnalysisInitiatorInput): Promise<AnalysisInitiatorOutput> {
   console.log('initiator', initialState);

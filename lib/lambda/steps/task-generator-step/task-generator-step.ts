@@ -1,8 +1,8 @@
-import {TaskGeneratorStepInput} from "../../types/TaskGeneratorStepInput";
-import {TaskGeneratorOutput} from "../../types/TaskGeneratorOutput";
+import {TaskGeneratorInput} from "./TaskGeneratorInput";
+import {TaskGeneratorOutput} from "./TaskGeneratorOutput";
 import {getSingleReportBucketKeyByTask} from "../../../utils/utils";
 
-export async function handler(initialState: TaskGeneratorStepInput): Promise<TaskGeneratorOutput> {
+export async function handler(initialState: TaskGeneratorInput): Promise<TaskGeneratorOutput> {
   return {
     // preserve the initial state
     ...initialState,

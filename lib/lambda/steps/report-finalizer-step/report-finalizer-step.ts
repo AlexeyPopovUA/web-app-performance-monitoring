@@ -1,38 +1,32 @@
 import {S3} from '@aws-sdk/client-s3';
-import {ReportFinalizerInput} from "../../types/ReportFinalizerInput";
-import {ReportFinalizerOutput} from "../../types/ReportFinalizerOutput";
+import {ReportFinalizerInput} from "./ReportFinalizerInput";
+import {ReportFinalizerOutput} from "./ReportFinalizerOutput";
 
 const s3 = new S3();
 
-// @ts-ignore
 export async function handler(initialState: ReportFinalizerInput): Promise<ReportFinalizerOutput> {
-  const sourceBucket = process.env.TEMPORARY_BUCKET_NAME;
-  const destinationBucket = process.env.REPORT_BUCKET_NAME;
+    const sourceBucket = process.env.TEMPORARY_BUCKET_NAME;
+    const destinationBucket = process.env.REPORT_BUCKET_NAME;
 
-  // TODO Remove the hardcoded prefix later
-  const prefix = 'nextjs-images/';
+    const copyJobs = initialState.concurrentTasks.map(({reportPath}) => reportPath);
 
-  // todo
-  const copyJobs = initialState.concurrentTasks.map(({reportPath}) => reportPath);
+    await Promise.all(copyJobs.map(async (reportPath) => {
+        const listObjects = await s3.listObjectsV2({Bucket: sourceBucket, Prefix: reportPath});
 
-  const listObjects = await s3.listObjectsV2({Bucket: sourceBucket, Prefix: prefix});
+        const copyPromises = listObjects.Contents?.map(async ({Key}) => {
+            if (Key) {
+                const copySource = `${sourceBucket}/${Key}`;
 
-  const copyPromises = listObjects.Contents?.map(async ({Key}) => {
-    if (Key) {
-      const copySource = `${sourceBucket}/${Key}`;
-      const destinationKey = Key.replace(prefix, '');
+                await s3.copyObject({
+                    CopySource: copySource,
+                    Bucket: destinationBucket,
+                    Key: Key
+                });
+            }
+        });
 
-      await s3.copyObject({
-        CopySource: copySource,
-        Bucket: destinationBucket,
-        Key: `${prefix}${destinationKey}`
-      });
-    }
-  });
+        copyPromises && await Promise.all(copyPromises);
+    }));
 
-  copyPromises && await Promise.all(copyPromises);
-
-  return {
-    ...initialState
-  };
+    return initialState;
 }
