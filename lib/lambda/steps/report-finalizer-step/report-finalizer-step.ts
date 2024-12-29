@@ -10,8 +10,12 @@ export async function handler(initialState: ReportFinalizerInput): Promise<Repor
 
     const copyJobs = initialState.concurrentTasks.map(({reportPath}) => reportPath);
 
+    console.log({copyJobs});
+
     await Promise.all(copyJobs.map(async (reportPath) => {
         const listObjects = await s3.listObjectsV2({Bucket: sourceBucket, Prefix: reportPath});
+
+        console.log("listObjects.Contents?.length", listObjects.Contents?.length);
 
         const copyPromises = listObjects.Contents?.map(async ({Key}) => {
             if (Key) {
