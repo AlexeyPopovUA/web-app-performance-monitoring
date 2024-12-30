@@ -23,7 +23,8 @@ const taskProcessingStack = new TaskProcessingStack(app, 'TaskProcessingStack', 
   },
 });
 
-networkStack.addDependency(taskProcessingStack);
+//networkStack.addDependency(taskProcessingStack);
+taskProcessingStack.addDependency(networkStack);
 
 new ReportStack(app, 'ReportStack', {
   bucketClients: {
