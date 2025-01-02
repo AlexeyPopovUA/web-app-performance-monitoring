@@ -11,28 +11,27 @@ export class NetworkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    if (configuration.NETWORKING.deployNetwork) {
-      this.vpc = new ec2.Vpc(this, `${configuration.COMMON.project}-ecs-vpc`, {
-        vpcName: configuration.NETWORKING.vpcName,
-        maxAzs: 2,
-        subnetConfiguration: [
-          {
-            name: 'public',
-            subnetType: ec2.SubnetType.PUBLIC,
-          },
-          {
-            name: 'private',
-            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-          }
-        ]
-      });
+    this.vpc = new ec2.Vpc(this, `${configuration.COMMON.project}-ecs-vpc`, {
+      vpcName: configuration.NETWORKING.vpcName,
+      maxAzs: 2,
+      subnetConfiguration: [
+        {
+          name: 'public',
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+        {
+          name: 'private',
+          subnetType: configuration.NETWORKING.enableNetworkEgress ? ec2.SubnetType.PRIVATE_WITH_EGRESS : ec2.SubnetType.PRIVATE_ISOLATED,
+        }
+      ],
+      natGateways: configuration.NETWORKING.enableNetworkEgress ? 1 : 0,
+    });
 
-      // security group with all outbound traffic allowed
-      this.securityGroup = new ec2.SecurityGroup(this, `${configuration.COMMON.project}-ecs-sg`, {
-        securityGroupName: configuration.NETWORKING.securityGroupName,
-        vpc: this.vpc,
-        allowAllOutbound: true,
-      });
-    }
+    // security group with all outbound traffic allowed
+    this.securityGroup = new ec2.SecurityGroup(this, `${configuration.COMMON.project}-ecs-sg`, {
+      securityGroupName: configuration.NETWORKING.securityGroupName,
+      vpc: this.vpc,
+      allowAllOutbound: true,
+    });
   }
 }

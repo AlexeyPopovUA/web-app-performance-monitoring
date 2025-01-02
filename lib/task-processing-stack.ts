@@ -24,14 +24,12 @@ export class TaskProcessingStack extends cdk.Stack {
 
     let vpc, securityGroup;
 
-    if (configuration.NETWORKING.deployNetwork) {
-      vpc = Vpc.fromLookup(this, `${configuration.COMMON.project}-VPC`, {
-        vpcName: configuration.NETWORKING.vpcName,
-        region: props.env.region
-      });
+    vpc = Vpc.fromLookup(this, `${configuration.COMMON.project}-VPC`, {
+      vpcName: configuration.NETWORKING.vpcName,
+      region: props.env.region
+    });
 
-      securityGroup = SecurityGroup.fromLookupByName(this, `${configuration.COMMON.project}-SecurityGroup`, configuration.NETWORKING.securityGroupName, vpc);
-    }
+    securityGroup = SecurityGroup.fromLookupByName(this, `${configuration.COMMON.project}-SecurityGroup`, configuration.NETWORKING.securityGroupName, vpc);
 
     const sqsConstruct = new SqsConstruct(this, `${configuration.COMMON.project}-SqsConstruct`);
 

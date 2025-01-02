@@ -9,7 +9,7 @@ import {Duration, RemovalPolicy} from "aws-cdk-lib/core";
 import {RetentionDays} from "aws-cdk-lib/aws-logs";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import {Cluster, FargatePlatformVersion} from "aws-cdk-lib/aws-ecs";
-import {ISecurityGroup, IVpc, SecurityGroup, SubnetType, Vpc} from "aws-cdk-lib/aws-ec2";
+import {ISecurityGroup, IVpc, SubnetType} from "aws-cdk-lib/aws-ec2";
 
 import configuration from "../../cfg/configuration";
 
@@ -133,7 +133,7 @@ export class StateMachineConstruct extends Construct {
           props.networking.securityGroup
         ],
         subnets: {
-          subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+          subnetType: configuration.NETWORKING.enableNetworkEgress ? SubnetType.PRIVATE_WITH_EGRESS : SubnetType.PRIVATE_ISOLATED,
           availabilityZones: ["us-east-1a"],
         },
         cluster: Cluster.fromClusterAttributes(this, 'Cluster', {
