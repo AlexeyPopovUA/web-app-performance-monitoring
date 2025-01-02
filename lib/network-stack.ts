@@ -1,5 +1,5 @@
-import * as cdk from 'aws-cdk-lib';
 import {Construct} from 'constructs';
+import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
 import configuration from "../cfg/configuration";

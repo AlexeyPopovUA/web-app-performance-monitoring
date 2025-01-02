@@ -2,14 +2,12 @@ import {Construct} from 'constructs';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import {IFunction} from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import {BlockPublicAccess, Bucket} from "aws-cdk-lib/aws-s3";
-import {Duration, RemovalPolicy} from "aws-cdk-lib/core";
-import {RetentionDays} from "aws-cdk-lib/aws-logs";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as core from "aws-cdk-lib/core";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as ecs from "aws-cdk-lib/aws-ecs";
-import {Cluster, FargatePlatformVersion} from "aws-cdk-lib/aws-ecs";
-import {ISecurityGroup, IVpc, SubnetType} from "aws-cdk-lib/aws-ec2";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 import configuration from "../../cfg/configuration";
 
@@ -19,23 +17,23 @@ type Props = {
     region: string;
     account: string;
   },
-  networking?: {
-    vpc: IVpc;
-    securityGroup: ISecurityGroup;
+  networking: {
+    vpc: ec2.IVpc;
+    securityGroup: ec2.ISecurityGroup;
   }
 }
 
 export class StateMachineConstruct extends Construct {
-  public readonly reportFinalizerLambda: IFunction;
+  public readonly reportFinalizerLambda: lambda.IFunction;
 
   constructor(scope: Construct, id: string, props: Props) {
     super(scope, id);
 
-    const temporaryReportBucket = new Bucket(this, `${configuration.COMMON.project}-temporary-report-bucket`, {
+    const temporaryReportBucket = new s3.Bucket(this, `${configuration.COMMON.project}-temporary-report-bucket`, {
       bucketName: configuration.REPORTING.temporaryBucketName,
-      removalPolicy: RemovalPolicy.DESTROY,
+      removalPolicy: core.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
-      blockPublicAccess: BlockPublicAccess.BLOCK_ALL
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
     });
 
     // Create Step Functions state machine
@@ -43,14 +41,14 @@ export class StateMachineConstruct extends Construct {
 
     const taskGeneratorLambda = new lambda.Function(this, `${configuration.COMMON.project}-task-generator`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      logRetention: RetentionDays.ONE_DAY,
+      logRetention: logs.RetentionDays.ONE_DAY,
       handler: 'task-generator-step.handler',
       code: lambda.Code.fromAsset('dist/steps/task-generator-step')
     });
 
     const analysisInitiatorLambda = new lambda.Function(this, `${configuration.COMMON.project}-analysis-initiator`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      logRetention: RetentionDays.ONE_DAY,
+      logRetention: logs.RetentionDays.ONE_DAY,
       handler: 'analysis-initiator-step.handler',
       code: lambda.Code.fromAsset('dist/steps/analysis-initiator-step'),
       environment: {
@@ -61,17 +59,17 @@ export class StateMachineConstruct extends Construct {
 
     const cleanupLambda = new lambda.Function(this, `${configuration.COMMON.project}-cleanup`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      logRetention: RetentionDays.ONE_DAY,
+      logRetention: logs.RetentionDays.ONE_DAY,
       handler: 'cleanup-step.handler',
       code: lambda.Code.fromAsset('dist/steps/cleanup-step')
     });
 
     this.reportFinalizerLambda = new lambda.Function(this, `${configuration.COMMON.project}-report-finalizer`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      logRetention: RetentionDays.ONE_DAY,
+      logRetention: logs.RetentionDays.ONE_DAY,
       handler: 'report-finalizer-step.handler',
       code: lambda.Code.fromAsset('dist/steps/report-finalizer-step'),
-      timeout: Duration.minutes(2),
+      timeout: core.Duration.minutes(2),
       environment: {
         REPORT_BUCKET_NAME: configuration.REPORTING.bucketName,
         TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName
@@ -116,7 +114,7 @@ export class StateMachineConstruct extends Construct {
       command: ['https://oleksiipopov.com', '--summary'],
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: `${configuration.COMMON.project}-sitespeedio-container`,
-        logRetention: RetentionDays.ONE_DAY
+        logRetention: logs.RetentionDays.ONE_DAY
       }),
     });
 
@@ -124,35 +122,28 @@ export class StateMachineConstruct extends Construct {
     // TODO: sitespeed.io uploads a single report to an S3 directory
     // TODO: sitespeed.io sends metrics to Grafana cloud
 
-    let fargateTaskRunner;
-
-    if (props.networking) {
-      fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
-        integrationPattern: sfn.IntegrationPattern.RUN_JOB,
-        securityGroups: [
-          props.networking.securityGroup
-        ],
-        subnets: {
-          subnetType: configuration.NETWORKING.enableNetworkEgress ? SubnetType.PRIVATE_WITH_EGRESS : SubnetType.PRIVATE_ISOLATED,
-          availabilityZones: ["us-east-1a"],
-        },
-        cluster: Cluster.fromClusterAttributes(this, 'Cluster', {
-          clusterName: configuration.ANALYSIS.clusterName,
-          vpc: props.networking.vpc
-        }),
-        taskDefinition,
-        launchTarget: new tasks.EcsFargateLaunchTarget({platformVersion: FargatePlatformVersion.LATEST}),
-        assignPublicIp: false,
-        containerOverrides: [{
-          containerDefinition,
-          command: sfn.JsonPath.listAt('$.command')
-        }],
-        resultPath: '$.taskResult'
-      });
-    } else {
-      // mocked fargate task runner
-      fargateTaskRunner = new sfn.Pass(this, `${configuration.COMMON.project}-run-fargate-task`);
-    }
+    const fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
+      integrationPattern: sfn.IntegrationPattern.RUN_JOB,
+      securityGroups: [
+        props.networking.securityGroup
+      ],
+      subnets: {
+        subnetType: configuration.NETWORKING.enableNetworkEgress ? ec2.SubnetType.PRIVATE_WITH_EGRESS : ec2.SubnetType.PRIVATE_ISOLATED,
+        availabilityZones: ["us-east-1a"],
+      },
+      cluster: ecs.Cluster.fromClusterAttributes(this, 'Cluster', {
+        clusterName: configuration.ANALYSIS.clusterName,
+        vpc: props.networking.vpc
+      }),
+      taskDefinition,
+      launchTarget: new tasks.EcsFargateLaunchTarget({platformVersion: ecs.FargatePlatformVersion.LATEST}),
+      assignPublicIp: false,
+      containerOverrides: [{
+        containerDefinition,
+        command: sfn.JsonPath.listAt('$.command')
+      }],
+      resultPath: '$.taskResult'
+    });
 
     // Finalizer step to send email notifications
     const finalizeReport = new tasks.LambdaInvoke(this, `${configuration.COMMON.project}-finalize-report`, {

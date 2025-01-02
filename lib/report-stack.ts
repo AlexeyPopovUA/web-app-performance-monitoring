@@ -1,25 +1,19 @@
-import * as cdk from 'aws-cdk-lib';
 import {Construct} from 'constructs';
-import {BlockPublicAccess, Bucket} from "aws-cdk-lib/aws-s3";
-import {
-  AllowedMethods, CachedMethods,
-  Distribution,
-  HttpVersion, OriginAccessIdentity,
-  PriceClass,
-  SecurityPolicyProtocol, ViewerProtocolPolicy
-} from "aws-cdk-lib/aws-cloudfront";
-import {S3BucketOrigin} from "aws-cdk-lib/aws-cloudfront-origins";
-import {Certificate, CertificateValidation} from "aws-cdk-lib/aws-certificatemanager";
-import {AaaaRecord, ARecord, HostedZone, RecordTarget} from "aws-cdk-lib/aws-route53";
-import {CloudFrontTarget} from "aws-cdk-lib/aws-route53-targets";
-import {IRole} from "aws-cdk-lib/aws-iam";
+import * as cdk from 'aws-cdk-lib';
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as cf from "aws-cdk-lib/aws-cloudfront";
+import * as cfOrigins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as cert from "aws-cdk-lib/aws-certificatemanager";
+import * as route53 from "aws-cdk-lib/aws-route53";
+import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 import configuration from "../cfg/configuration";
 
 type ReportStackProps = cdk.StackProps & {
   bucketClients: {
     // receives read/write permissions to the bucket
-    finalReportWriterRole?: IRole;
+    finalReportWriterRole?: iam.IRole;
   }
 }
 
@@ -27,47 +21,47 @@ export class ReportStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ReportStackProps) {
     super(scope, id, props);
 
-    const reportBucket = new Bucket(this, `${configuration.COMMON.project}-report-bucket`, {
+    const reportBucket = new s3.Bucket(this, `${configuration.COMMON.project}-report-bucket`, {
       bucketName: configuration.REPORTING.bucketName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
-      blockPublicAccess: BlockPublicAccess.BLOCK_ALL
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
     });
 
     props.bucketClients.finalReportWriterRole && reportBucket.grantWrite(props.bucketClients.finalReportWriterRole);
 
-    const originAccessIdentity = new OriginAccessIdentity(this, `${configuration.COMMON.project}-reports-origin-access-identity`);
+    const originAccessIdentity = new cf.OriginAccessIdentity(this, `${configuration.COMMON.project}-reports-origin-access-identity`);
     reportBucket.grantRead(originAccessIdentity);
 
-    const hostedZone = HostedZone.fromHostedZoneAttributes(this, `${configuration.COMMON.project}-hosted-zone`, {
+    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, `${configuration.COMMON.project}-hosted-zone`, {
       hostedZoneId: configuration.HOSTING.hostedZoneID,
       zoneName: configuration.HOSTING.hostedZoneName
     });
 
-    const certificate = new Certificate(this, `${configuration.COMMON.project}-reports-certificate`, {
+    const certificate = new cert.Certificate(this, `${configuration.COMMON.project}-reports-certificate`, {
       domainName: configuration.REPORTING.reportsDomainName,
-      validation: CertificateValidation.fromDns(hostedZone)
+      validation: cert.CertificateValidation.fromDns(hostedZone)
     });
 
-    const distribution = new Distribution(this, `${configuration.COMMON.project}-reports-distribution`, {
+    const distribution = new cf.Distribution(this, `${configuration.COMMON.project}-reports-distribution`, {
       // comment contains the distribution name
       comment: `${configuration.COMMON.project}-main reports distribution`,
-      httpVersion: HttpVersion.HTTP2_AND_3,
-      priceClass: PriceClass.PRICE_CLASS_100,
+      httpVersion: cf.HttpVersion.HTTP2_AND_3,
+      priceClass: cf.PriceClass.PRICE_CLASS_100,
       certificate: certificate,
       enableIpv6: true,
-      minimumProtocolVersion: SecurityPolicyProtocol.TLS_V1_2_2021,
+      minimumProtocolVersion: cf.SecurityPolicyProtocol.TLS_V1_2_2021,
       enableLogging: false,
       enabled: true,
       domainNames: [
         configuration.REPORTING.reportsDomainName,
       ],
       defaultBehavior: {
-        allowedMethods: AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-        cachedMethods: CachedMethods.CACHE_GET_HEAD_OPTIONS,
+        allowedMethods: cf.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+        cachedMethods: cf.CachedMethods.CACHE_GET_HEAD_OPTIONS,
         compress: true,
-        viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        origin: S3BucketOrigin.withOriginAccessIdentity(reportBucket, {
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        origin: cfOrigins.S3BucketOrigin.withOriginAccessIdentity(reportBucket, {
           originAccessIdentity: originAccessIdentity,
           originShieldRegion: props.env?.region,
           originPath: "/"
@@ -75,16 +69,16 @@ export class ReportStack extends cdk.Stack {
       }
     });
 
-    new ARecord(this, `${configuration.COMMON.project}-reports-a-record`, {
+    new route53.ARecord(this, `${configuration.COMMON.project}-reports-a-record`, {
       recordName: configuration.REPORTING.reportsDomainName,
       zone: hostedZone,
-      target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution))
     });
 
-    new AaaaRecord(this, `${configuration.COMMON.project}-reports-aaaa-record`, {
+    new route53.AaaaRecord(this, `${configuration.COMMON.project}-reports-aaaa-record`, {
       recordName: configuration.REPORTING.reportsDomainName,
       zone: hostedZone,
-      target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution))
     });
   }
 }

@@ -1,7 +1,7 @@
-import * as cdk from 'aws-cdk-lib';
-import {IRole} from "aws-cdk-lib/aws-iam";
 import {Construct} from 'constructs';
-import {SecurityGroup, Vpc} from "aws-cdk-lib/aws-ec2";
+import * as cdk from 'aws-cdk-lib';
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 import {SqsConstruct} from "./task-processing-constructs/SqsConstruct";
 import {APIGatewayConstruct} from "./task-processing-constructs/APIGatewayConstruct";
@@ -17,19 +17,19 @@ type TaskProcessingStackProps = cdk.StackProps & {
 }
 
 export class TaskProcessingStack extends cdk.Stack {
-  public readonly finalizerRole: IRole | undefined;
+  public readonly finalizerRole: iam.IRole | undefined;
 
   constructor(scope: Construct, id: string, props: TaskProcessingStackProps) {
     super(scope, id, props);
 
     let vpc, securityGroup;
 
-    vpc = Vpc.fromLookup(this, `${configuration.COMMON.project}-VPC`, {
+    vpc = ec2.Vpc.fromLookup(this, `${configuration.COMMON.project}-VPC`, {
       vpcName: configuration.NETWORKING.vpcName,
       region: props.env.region
     });
 
-    securityGroup = SecurityGroup.fromLookupByName(this, `${configuration.COMMON.project}-SecurityGroup`, configuration.NETWORKING.securityGroupName, vpc);
+    securityGroup = ec2.SecurityGroup.fromLookupByName(this, `${configuration.COMMON.project}-SecurityGroup`, configuration.NETWORKING.securityGroupName, vpc);
 
     const sqsConstruct = new SqsConstruct(this, `${configuration.COMMON.project}-SqsConstruct`);
 
@@ -41,18 +41,18 @@ export class TaskProcessingStack extends cdk.Stack {
         region: props.env.region,
         account: props.env.account
       },
-      networking: (vpc && securityGroup) ? {
+      networking: {
         vpc,
         securityGroup
-      } : undefined
+      }
     });
 
     this.finalizerRole = stateMachineConstruction.reportFinalizerLambda.role;
 
     new ClusterConstruct(this, `${configuration.COMMON.project}-ClusterConstruct`, {
-      networking: vpc ? {
+      networking: {
         vpc
-      } : undefined
+      }
     })
   }
 }
