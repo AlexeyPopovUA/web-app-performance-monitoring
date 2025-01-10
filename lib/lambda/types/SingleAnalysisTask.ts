@@ -1,4 +1,4 @@
-import {CommonTaskProps} from "./CommoontTaskProps";
+import {CommonTaskProps} from "./CommonTaskProps";
 
 export type SingleAnalysisTask = CommonTaskProps & {
   variantName: string;

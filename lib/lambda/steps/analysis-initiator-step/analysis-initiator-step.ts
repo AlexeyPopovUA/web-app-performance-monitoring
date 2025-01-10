@@ -21,9 +21,7 @@ export async function handler(initialState: AnalysisInitiatorInput): Promise<Ana
       // S3 bucket configuration
       ...(temporaryBucketName ? ['--s3.bucketname', temporaryBucketName] : []),
       ...(temporaryBucketRegion ? ['--s3.region', temporaryBucketRegion] : []),
-      ...(initialState.reportPath ? ['--outputFolder', initialState.reportPath] : []),
-
-      '--summary'
+      ...(initialState.reportPath ? ['--s3.path', initialState.reportPath] : [])
     ],
   };
 }
