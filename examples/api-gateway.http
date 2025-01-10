@@ -37,17 +37,43 @@ Content-Type: application/json
   "gitBranchOrTag": "main",
   "variants": [
     {
-      "variantName": "HomePage",
+      "variantName": "Home",
       "urls": [
         "https://oleksiipopov.com/?silent"
       ],
-      "iterations": 5,
+      "iterations": 3,
       "browsers": ["chrome", "firefox"]
     },
     {
-      "variantName": "ContactPage",
+      "variantName": "Contact",
       "urls": [
         "https://oleksiipopov.com/contact/?silent"
+      ],
+      "iterations": 3,
+      "browsers": ["chrome"]
+    },
+    {
+      "variantName": "Article_Project",
+      "urls": [
+        "https://oleksiipopov.com/blog/react-18-vs-react-19/?silent",
+        "https://oleksiipopov.com/portfolio/tomtom-web-sdk-demo-catalog/?silent"
+      ],
+      "iterations": 3,
+      "browsers": ["chrome"]
+    },
+    {
+      "variantName": "Blog_Portfolio",
+      "urls": [
+        "https://oleksiipopov.com/blog/?silent",
+        "https://oleksiipopov.com/portfolio/?silent"
+      ],
+      "iterations": 3,
+      "browsers": ["chrome"]
+    },
+    {
+      "variantName": "Resume",
+      "urls": [
+        "https://oleksiipopov.com/resume/?silent"
       ],
       "iterations": 3,
       "browsers": ["chrome"]
