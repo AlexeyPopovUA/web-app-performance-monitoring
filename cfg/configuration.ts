@@ -21,8 +21,8 @@ export default {
     taskFamily: 'web-perf-mon-task-family-sitespeedio'
   },
   NETWORKING: {
-    vpcName: `web-perf-mon-vpc`,
-    securityGroupName: `web-perf-mon-ecs-sg`,
+    vpcName: `vpc-with-gateway`,
+    securityGroupName: `vpc-with-gateway-ecs-sg`,
     // NAT gateway and public IP for the NAT gateway are expensive things for a home lab
     enableNetworkEgress: process.env?.ENABLE_NETWORK_EGRESS === "true" || false,
   }
