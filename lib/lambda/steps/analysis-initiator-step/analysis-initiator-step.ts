@@ -15,7 +15,7 @@ export async function handler(initialState: AnalysisInitiatorInput): Promise<Ana
     command: [
       ...initialState.urls,
       '--browser', initialState.browser,
-      '--iterations', initialState.iterations.toString(),
+      '--browsertime.iterations', initialState.iterations.toString(),
       '--groupAlias', initialState.variantName,
 
       // S3 bucket configuration
