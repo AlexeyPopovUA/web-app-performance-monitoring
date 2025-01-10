@@ -14,6 +14,7 @@ type ReportStackProps = cdk.StackProps & {
   bucketClients: {
     // receives read/write permissions to the bucket
     finalReportWriterRole?: iam.IRole;
+    publicAPIRole?: iam.IRole;
   }
 }
 
@@ -29,6 +30,7 @@ export class ReportStack extends cdk.Stack {
     });
 
     props.bucketClients.finalReportWriterRole && reportBucket.grantWrite(props.bucketClients.finalReportWriterRole);
+    props.bucketClients.publicAPIRole && reportBucket.grantRead(props.bucketClients.publicAPIRole);
 
     const originAccessIdentity = new cf.OriginAccessIdentity(this, `${configuration.COMMON.project}-reports-origin-access-identity`);
     reportBucket.grantRead(originAccessIdentity);

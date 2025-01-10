@@ -9,7 +9,9 @@ export default {
     hostedZoneID: process.env?.HOSTED_ZONE_ID || "",
     hostedZoneName: "oleksiipopov.com",
     staticDomainName: "oleksiipopov.com",
-    apiDomainName: "task.perf-mon.examples.oleksiipopov.com"
+    // todo Migrate task API to the generic public API gateway
+    taskApiDomainName: "task.perf-mon.examples.oleksiipopov.com",
+    apiDomainName: "api.perf-mon.examples.oleksiipopov.com"
   },
   REPORTING: {
     bucketName: "web-perf-mon-reports",

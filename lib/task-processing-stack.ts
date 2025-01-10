@@ -7,6 +7,7 @@ import {SqsConstruct} from "./task-processing-constructs/SqsConstruct";
 import {APIGatewayConstruct} from "./task-processing-constructs/APIGatewayConstruct";
 import {StateMachineConstruct} from "./task-processing-constructs/StateMachineConstruct";
 import {ClusterConstruct} from "./task-processing-constructs/ClusterConstruct";
+import {PublicAPIGatewayConstruct} from "./task-processing-constructs/PublicAPIGatewayConstruct";
 import configuration from "../cfg/configuration";
 
 type TaskProcessingStackProps = cdk.StackProps & {
@@ -18,6 +19,7 @@ type TaskProcessingStackProps = cdk.StackProps & {
 
 export class TaskProcessingStack extends cdk.Stack {
   public readonly finalizerRole: iam.IRole | undefined;
+  public readonly publicAPIRole: iam.IRole | undefined;
 
   constructor(scope: Construct, id: string, props: TaskProcessingStackProps) {
     super(scope, id, props);
@@ -34,6 +36,7 @@ export class TaskProcessingStack extends cdk.Stack {
     const sqsConstruct = new SqsConstruct(this, `${configuration.COMMON.project}-SqsConstruct`);
 
     new APIGatewayConstruct(this, `${configuration.COMMON.project}-APIGatewayConstruct`, sqsConstruct.taskQueue);
+    const publicAPI = new PublicAPIGatewayConstruct(this, `${configuration.COMMON.project}-PublicAPIGatewayConstruct`);
 
     const stateMachineConstruction = new StateMachineConstruct(this, `${configuration.COMMON.project}-StateMachineConstruct`, {
       sqsTaskHandler: sqsConstruct.sqsTaskHandler,
@@ -47,7 +50,9 @@ export class TaskProcessingStack extends cdk.Stack {
       }
     });
 
+    // TODO Review this
     this.finalizerRole = stateMachineConstruction.reportFinalizerLambda.role;
+    this.publicAPIRole = publicAPI.publicAPILambda.role;
 
     new ClusterConstruct(this, `${configuration.COMMON.project}-ClusterConstruct`, {
       networking: {

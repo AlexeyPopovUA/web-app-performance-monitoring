@@ -42,25 +42,25 @@ export class APIGatewayConstruct extends Construct {
     });
 
     const certificate = new cert.Certificate(this, `${configuration.COMMON.project}-certificate`, {
-      domainName: configuration.HOSTING.apiDomainName,
+      domainName: configuration.HOSTING.taskApiDomainName,
       validation: cert.CertificateValidation.fromDns(hostedZone)
     });
 
     const apiDomainName = new apigateway.DomainName(this, `${configuration.COMMON.project}-api-domain-name`, {
-      domainName: configuration.HOSTING.apiDomainName,
+      domainName: configuration.HOSTING.taskApiDomainName,
       certificate
     });
 
     apiDomainName.addBasePathMapping(api);
 
     new route53.ARecord(this, `${configuration.COMMON.project}-api-domain-name-alias-record`, {
-      recordName: configuration.HOSTING.apiDomainName,
+      recordName: configuration.HOSTING.taskApiDomainName,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.ApiGatewayDomain(apiDomainName))
     });
 
     new route53.AaaaRecord(this, `${configuration.COMMON.project}-api-domain-name-alias-record-ipv6`, {
-      recordName: configuration.HOSTING.apiDomainName,
+      recordName: configuration.HOSTING.taskApiDomainName,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.ApiGatewayDomain(apiDomainName))
     })

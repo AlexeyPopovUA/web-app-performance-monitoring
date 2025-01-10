@@ -17,7 +17,8 @@ const taskProcessingStack = new TaskProcessingStack(app, 'TaskProcessingStack', 
 
 new ReportStack(app, 'ReportStack', {
   bucketClients: {
-    finalReportWriterRole: taskProcessingStack.finalizerRole
+    finalReportWriterRole: taskProcessingStack.finalizerRole,
+    publicAPIRole: taskProcessingStack.publicAPIRole
   },
   env: {
     account: configuration.COMMON.account,
