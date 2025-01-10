@@ -16,7 +16,11 @@ export async function handler(initialState: AnalysisInitiatorInput): Promise<Ana
       ...initialState.urls,
       '--browser', initialState.browser,
       '--browsertime.iterations', initialState.iterations.toString(),
+      '--browsertime.firefox.includeResponseBodies',
+      '--browsertime.chrome.includeResponseBodies',
       '--groupAlias', initialState.variantName,
+      '--sustainable.enable',
+      '--plugins.add @sitespeed.io/plugin-lighthouse',
 
       // S3 bucket configuration
       ...(temporaryBucketName ? ['--s3.bucketname', temporaryBucketName] : []),

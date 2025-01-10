@@ -108,7 +108,7 @@ export class StateMachineConstruct extends Construct {
 
     // Add container to the task definition
     const containerDefinition = taskDefinition.addContainer(`${configuration.COMMON.project}-sitespeedio-container`, {
-      image: ecs.ContainerImage.fromRegistry('sitespeedio/sitespeed.io:35.7.5'),
+      image: ecs.ContainerImage.fromRegistry('sitespeedio/sitespeed.io:35.7.5-plus1'),
       memoryLimitMiB: 8192,
       cpu: 4096,
       command: ['https://oleksiipopov.com', '--summary'],
