@@ -21,7 +21,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
         // Filter for index.html files, excluding ones with 'page'
         const indexFiles = response.Contents
-            .map(item => item.Key)
+            .map(item => item?.Key ?? "")
             .filter(key => key &&
                 key.endsWith('index.html') &&
                 !key.includes('page'))

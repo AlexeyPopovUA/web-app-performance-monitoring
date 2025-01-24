@@ -4,20 +4,26 @@ import {object, string, array, number, ValidationError} from 'yup';
 
 const sqs = new SQS();
 
+// Custom method to validate uniqueness of variantName
+const uniqueVariantNames = array().of(
+  object({
+    variantName: string().required(),
+    urls: array().of(string()).required(),
+    iterations: number().required(),
+    browsers: array().of(string()).required()
+  })
+).test('unique-variant-names', 'variantName must be unique', (variants) => {
+  const variantNames = variants?.map(variant => variant.variantName);
+  return new Set(variantNames).size === variantNames?.length;
+});
+
 // See examples/api-gateway.http for a sample request payload
 const taskSchema = object({
   projectName: string().required(),
   baseUrl: string().required(),
   environment: string().required(),
   gitBranchOrTag: string().optional(),
-  variants: array().of(
-    object({
-      variantName: string().required(),
-      urls: array().of(string()).required(),
-      iterations: number().required(),
-      browsers: array().of(string()).required()
-    })
-  ).required()
+  variants: uniqueVariantNames.required()
 });
 
 export const handler: APIGatewayProxyHandler = async (event) => {
