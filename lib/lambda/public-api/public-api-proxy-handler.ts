@@ -1,8 +1,8 @@
 import {APIGatewayProxyHandler} from 'aws-lambda';
 import {S3Client, ListObjectsV2Command} from '@aws-sdk/client-s3';
 import {getTaskParametersFromReportPath} from "../../utils/utils";
+import {ListObjectsV2CommandInput} from "@aws-sdk/client-s3/dist-types/commands/ListObjectsV2Command";
 
-const s3Client = new S3Client({});
 const BUCKET_NAME = process.env.REPORTS_BUCKET_NAME!;
 const BASE_URL = `https://${process.env.REPORTS_DOMAIN_NAME}`;
 
@@ -14,25 +14,50 @@ type SingleReport = {
   path: string;
 }
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+async function listHtmlFiles(s3Client: S3Client, continuationToken?: string): Promise<string[]> {
+  const htmlFiles: string[] = [];
+  const params: ListObjectsV2CommandInput = {
+    Bucket: BUCKET_NAME,
+    Prefix: 'reports/',
+  };
+
+  const listObjectsCommand = new ListObjectsV2Command(params);
+
   try {
-    const command = new ListObjectsV2Command({
-      Bucket: BUCKET_NAME,
-    });
-
-    const response = await s3Client.send(command);
-
-    if (!response.Contents) {
-      throw new Error('No contents found in bucket');
+    if (continuationToken) {
+      params.ContinuationToken = continuationToken;
     }
 
-    const indexFiles = response.Contents
-      .map(item => item?.Key ?? "")
-      .filter(key => key &&
-        key.endsWith('index.html') &&
-        !key.includes('page'))
-      .sort()
-      .reverse();
+    const data = await s3Client.send(listObjectsCommand);
+
+    if (data.Contents) {
+      for (const object of data.Contents) {
+        if (object.Key && object.Key.endsWith("index.html") && !object.Key.includes("pages")) {
+          htmlFiles.push(object.Key);
+        }
+      }
+    }
+
+    if (data.IsTruncated) {
+      // Recursively call the function with the next continuation token
+      const nextHtmlFiles = await listHtmlFiles(s3Client, data.NextContinuationToken);
+      htmlFiles.push(...nextHtmlFiles);
+    }
+
+  } catch (err) {
+    console.error("Error:", err);
+  }
+
+  return htmlFiles;
+}
+
+// TODO Support request of a list of projects
+// TODO Support request of a list of reports for a specific project
+export const handler: APIGatewayProxyHandler = async (event) => {
+  try {
+    const indexFiles = await listHtmlFiles(new S3Client({}));
+
+    console.log('indexFiles:', JSON.stringify(indexFiles));
 
     const groupedReports: { [key: string]: { [key: string]: { [key: string]: SingleReport[] } } } = {};
 
@@ -58,6 +83,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         path: file
       });
     });
+
+    console.log('groupedReports:', JSON.stringify(groupedReports));
 
     const html = `
 <!DOCTYPE html>
