@@ -6,6 +6,14 @@ const s3Client = new S3Client({});
 const BUCKET_NAME = process.env.REPORTS_BUCKET_NAME!;
 const BASE_URL = `https://${process.env.REPORTS_DOMAIN_NAME}`;
 
+type SingleReport = {
+  projectName: string;
+  variantName: string;
+  environment: string;
+  date: string;
+  path: string;
+}
+
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
     const command = new ListObjectsV2Command({
@@ -26,23 +34,29 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       .sort()
       .reverse();
 
-    const groupedReports: { [key: string]: { [key: string]: { [key: string]: string[] } } } = {};
+    const groupedReports: { [key: string]: { [key: string]: { [key: string]: SingleReport[] } } } = {};
 
     indexFiles.forEach(file => {
       const {projectName, variantName, environment, timestamp} = getTaskParametersFromReportPath(file);
-      const date = new Date(timestamp).toLocaleDateString();
+      const date = new Date(timestamp).toString();
 
       if (!groupedReports[projectName]) {
         groupedReports[projectName] = {};
       }
-      if (!groupedReports[projectName][variantName]) {
-        groupedReports[projectName][variantName] = {};
+      if (!groupedReports[projectName][environment]) {
+        groupedReports[projectName][environment] = {};
       }
-      if (!groupedReports[projectName][variantName][environment]) {
-        groupedReports[projectName][variantName][environment] = [];
+      if (!groupedReports[projectName][environment][variantName]) {
+        groupedReports[projectName][environment][variantName] = [];
       }
 
-      groupedReports[projectName][variantName][environment].push(`${BASE_URL}/${file} - ${date}`);
+      groupedReports[projectName][environment][variantName].push({
+        environment,
+        projectName,
+        variantName,
+        date,
+        path: file
+      });
     });
 
     const html = `
@@ -86,14 +100,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     ${Object.keys(groupedReports).map(projectName => `
       <h2>${projectName}</h2>
       <div class="report-group">
-        ${Object.keys(groupedReports[projectName]).map(variantName => `
-          <h3>${variantName}</h3>
+        ${Object.keys(groupedReports[projectName]).map(environmentName => `
+          <h3>${environmentName}</h3>
           <div class="report-group">
-            ${Object.keys(groupedReports[projectName][variantName]).map(environment => `
-              <h4>${environment}</h4>
-              <ul class="reports-list">
-                ${groupedReports[projectName][variantName][environment].map(report => `
-                  <li><a href="${report.split(' - ')[0]}">${report.split(' - ')[1]}</a></li>
+            ${Object.keys(groupedReports[projectName][environmentName]).map(variantName => `
+              <h4>${variantName}</h4>
+              <ul class="reports-list report-group">
+                ${groupedReports[projectName][environmentName][variantName].map(data => `
+                  <li><a href="${BASE_URL}/${data.path}">${data.date}</a></li>
                 `).join('')}
               </ul>
             `).join('')}

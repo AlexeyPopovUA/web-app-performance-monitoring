@@ -10,5 +10,5 @@ export function getTaskParametersFromReportPath(reportPath: string): RecoveredTa
 
   console.log({ projectName, environment, gitBranchOrTag, timestamp, variantName });
 
-  return { projectName, environment, gitBranchOrTag, timestamp: new Date(timestamp).getTime(), variantName };
+  return { projectName, environment, gitBranchOrTag, timestamp: parseInt(timestamp), variantName };
 }
