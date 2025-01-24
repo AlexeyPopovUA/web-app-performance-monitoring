@@ -10,7 +10,7 @@ const uniqueVariantNames = array().of(
     variantName: string().required(),
     urls: array().of(string()).required(),
     iterations: number().required(),
-    browsers: array().of(string()).required()
+    browser: string().oneOf(['chrome', 'firefox', 'edge']).required()
   })
 ).test('unique-variant-names', 'variantName must be unique', (variants) => {
   const variantNames = variants?.map(variant => variant.variantName);

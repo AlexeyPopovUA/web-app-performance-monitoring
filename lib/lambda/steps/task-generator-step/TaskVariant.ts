@@ -2,5 +2,5 @@ export type TaskVariant = {
   variantName: string;
   urls: string[];
   iterations: number;
-  browsers: string[];
+  browser: 'chrome' | 'firefox' | 'edge';
 }

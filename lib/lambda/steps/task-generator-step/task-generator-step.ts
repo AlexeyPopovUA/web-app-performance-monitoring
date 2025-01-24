@@ -8,28 +8,26 @@ export async function handler(initialState: TaskGeneratorInput): Promise<TaskGen
     ...initialState,
     // generate concurrent tasks
     concurrentTasks: initialState.variants.reduce<TaskGeneratorOutput['concurrentTasks']>((acc, item) => {
-      // split concurrent tasks by browsers
-      item.browsers.forEach(browser => {
-        const cfg = {
-          // common
-          projectName: initialState.projectName,
-          baseUrl: initialState.baseUrl,
-          environment: initialState.environment,
-          gitBranchOrTag: initialState.gitBranchOrTag,
+      const cfg = {
+        // common
+        projectName: initialState.projectName,
+        baseUrl: initialState.baseUrl,
+        environment: initialState.environment,
+        gitBranchOrTag: initialState.gitBranchOrTag,
 
-          // specific
-          variantName: item.variantName,
-          urls: item.urls,
-          iterations: item.iterations,
-          browser: browser,
-        }
+        // specific
+        variantName: item.variantName,
+        urls: item.urls,
+        iterations: item.iterations,
+        browser: item.browser,
+      }
 
-        acc.push({
-          ...cfg,
+      acc.push({
+        ...cfg,
 
-          reportPath: getSingleReportBucketKeyByTask(cfg)
-        });
+        reportPath: getSingleReportBucketKeyByTask(cfg)
       });
+
       return acc;
     }, [])
   };
