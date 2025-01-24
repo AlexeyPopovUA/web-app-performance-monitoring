@@ -17,7 +17,7 @@ Content-Type: application/json
         "https://oleksiipopov.com/contact/?silent"
       ],
       "iterations": 1,
-      "browsers": ["chrome"]
+      "browser": "chrome"
     }
   ]
 }
@@ -25,7 +25,48 @@ Content-Type: application/json
 
 #######
 
-# Valid request
+# Valid multi-request
+
+POST https://task.perf-mon.examples.oleksiipopov.com/request
+Content-Type: application/json
+
+{
+  "projectName": "Personal Website - Oleksii Popov",
+  "baseUrl": "https://oleksiipopov.com",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "variants": [
+    {
+      "variantName": "Home",
+      "urls": [
+        "https://oleksiipopov.com/?silent"
+      ],
+      "iterations": 2,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Resume",
+      "urls": [
+        "https://oleksiipopov.com/resume/?silent"
+      ],
+      "iterations": 2,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Portfolio",
+      "urls": [
+        "https://oleksiipopov.com/portfolio/?silent"
+      ],
+      "iterations": 2,
+      "browser": "chrome"
+    }
+  ]
+}
+
+#######
+
+# Invalid request:
+# Non-unique variant names
 
 POST https://task.perf-mon.examples.oleksiipopov.com/request
 Content-Type: application/json
@@ -37,46 +78,20 @@ Content-Type: application/json
   "gitBranchOrTag": "main",
   "variants": [
     {
-      "variantName": "Home",
+      "variantName": "NAME",
       "urls": [
-        "https://oleksiipopov.com/?silent"
+        "https://oleksiipopov.com/blog/react-18-vs-react-19/?silent"
       ],
       "iterations": 3,
-      "browsers": ["chrome", "firefox"]
+      "browser": "chrome"
     },
     {
-      "variantName": "Contact",
-      "urls": [
-        "https://oleksiipopov.com/contact/?silent"
-      ],
-      "iterations": 3,
-      "browsers": ["chrome"]
-    },
-    {
-      "variantName": "Article_Project",
-      "urls": [
-        "https://oleksiipopov.com/blog/react-18-vs-react-19/?silent",
-        "https://oleksiipopov.com/portfolio/tomtom-web-sdk-demo-catalog/?silent"
-      ],
-      "iterations": 3,
-      "browsers": ["chrome"]
-    },
-    {
-      "variantName": "Blog_Portfolio",
-      "urls": [
-        "https://oleksiipopov.com/blog/?silent",
-        "https://oleksiipopov.com/portfolio/?silent"
-      ],
-      "iterations": 3,
-      "browsers": ["chrome"]
-    },
-    {
-      "variantName": "Resume",
+      "variantName": "NAME",
       "urls": [
         "https://oleksiipopov.com/resume/?silent"
       ],
       "iterations": 3,
-      "browsers": ["chrome"]
+      "browser": "chrome"
     }
   ]
 }

@@ -1,0 +1,146 @@
+#######
+
+# Valid simple single request
+
+POST https://task.perf-mon.examples.oleksiipopov.com/request
+Content-Type: application/json
+
+{
+  "projectName": "Personal Website - Oleksii Popov",
+  "baseUrl": "https://oleksiipopov.com",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "variants": [
+    {
+      "variantName": "Home",
+      "urls": [
+        "https://oleksiipopov.com/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    }
+  ]
+}
+
+
+#######
+
+# Personal Website - Oleksii Popov
+
+POST https://task.perf-mon.examples.oleksiipopov.com/request
+Content-Type: application/json
+
+{
+  "projectName": "Personal Website - Oleksii Popov",
+  "baseUrl": "https://oleksiipopov.com",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "variants": [
+    {
+      "variantName": "Home",
+      "urls": [
+        "https://oleksiipopov.com/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Resume",
+      "urls": [
+        "https://oleksiipopov.com/resume/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Portfolio",
+      "urls": [
+        "https://oleksiipopov.com/portfolio/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Blog",
+      "urls": [
+        "https://oleksiipopov.com/blog/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Article - React 18 vs React 19",
+      "urls": [
+        "https://oleksiipopov.com/blog/react-18-vs-react-19/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Project - Web SDK demo catalog",
+      "urls": [
+        "https://oleksiipopov.com/portfolio/tomtom-web-sdk-demo-catalog/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    }
+  ]
+}
+
+#######
+
+# Wife's blog - Zapiski Mami
+
+POST https://task.perf-mon.examples.oleksiipopov.com/request
+Content-Type: application/json
+
+{
+  "projectName": "Wife's blog - Zapiski Mami",
+  "baseUrl": "https://www.zapiskimami.com/",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "variants": [
+    {
+      "variantName": "Home",
+      "urls": [
+        "https://www.zapiskimami.com/"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Article - Kasteel de Haar, Utrecht",
+      "urls": [
+        "https://www.zapiskimami.com/blog/2020-07-18-kasteel-de-haar-utrecht/"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    }
+  ]
+}
+
+#######
+
+# Route Planner - TomTom
+
+POST https://task.perf-mon.examples.oleksiipopov.com/request
+Content-Type: application/json
+
+{
+  "projectName": "Route Planner - TomTom",
+  "baseUrl": "https://plan.tomtom.com",
+  "environment": "production",
+  "gitBranchOrTag": "v3.70.3",
+  "variants": [
+    {
+      "variantName": "Road Trip - Nockalm",
+      "urls": [
+        "https://plan.tomtom.com/en/route/view/95736fc3-8982-45a6-874c-a39b669e7ab9/?p=46.91709,13.77691,12.05z&silent=true"
+      ],
+      "iterations": 2,
+      "browser": "chrome"
+    }
+  ]
+}
+
+#######
