@@ -27,6 +27,7 @@
     "@types/aws-lambda": "^8.10.145",
     "aws-cdk-lib": "2.170.0",
     "constructs": "^10.4.2",
+    "p-limit": "^6.2.0",
     "source-map-support": "^0.5.21",
     "yup": "^1.4.0"
   }

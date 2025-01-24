@@ -1,8 +1,10 @@
 import {S3} from '@aws-sdk/client-s3';
 import {ReportFinalizerInput} from "./ReportFinalizerInput";
 import {ReportFinalizerOutput} from "./ReportFinalizerOutput";
+import pLimit from 'p-limit';
 
 const s3 = new S3();
+const limit = pLimit(50);
 
 export async function handler(initialState: ReportFinalizerInput): Promise<ReportFinalizerOutput> {
     const sourceBucket = process.env.TEMPORARY_BUCKET_NAME;
@@ -17,16 +19,18 @@ export async function handler(initialState: ReportFinalizerInput): Promise<Repor
 
         console.log("listObjects.Contents?.length", listObjects.Contents?.length);
 
-        const copyPromises = listObjects.Contents?.map(async ({Key}) => {
+        const copyPromises = listObjects.Contents?.map(({Key}) => {
             if (Key) {
                 const copySource = `${sourceBucket}/${Key}`;
 
-                await s3.copyObject({
+                return limit(() => s3.copyObject({
                     CopySource: copySource,
                     Bucket: destinationBucket,
                     Key: Key
-                });
+                }));
             }
+
+            return Promise.resolve();
         });
 
         copyPromises && await Promise.all(copyPromises);
