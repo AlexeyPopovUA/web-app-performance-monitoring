@@ -69,7 +69,8 @@ export class StateMachineConstruct extends Construct {
       logRetention: logs.RetentionDays.ONE_DAY,
       handler: 'report-finalizer-step.handler',
       code: lambda.Code.fromAsset('dist/steps/report-finalizer-step'),
-      timeout: core.Duration.minutes(2),
+      timeout: core.Duration.minutes(5),
+      memorySize: 256,
       environment: {
         REPORT_BUCKET_NAME: configuration.REPORTING.bucketName,
         TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName
