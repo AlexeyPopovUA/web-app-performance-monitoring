@@ -19,7 +19,8 @@ export class PublicAPIGatewayConstruct extends Construct {
     // Create Lambda function for handling API requests
     const publicGatewayProxyHandler = new lambda.Function(this, `${configuration.COMMON.project}-public-gateway-proxy-handler`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      handler: 'public-api-proxy-handler.handler',
+      //handler: 'public-api-proxy-handler.handler',
+      handler: 'lambda.handler',
       logRetention: logs.RetentionDays.ONE_DAY,
       code: lambda.Code.fromAsset('dist/public-api'),
       // important for the big amounts of S3 items
@@ -28,6 +29,9 @@ export class PublicAPIGatewayConstruct extends Construct {
       environment: {
         REPORTS_BUCKET_NAME: configuration.REPORTING.bucketName,
         REPORTS_DOMAIN_NAME: configuration.REPORTING.reportsDomainName,
+        REGION: configuration.COMMON.region,
+        // TODO Take from a parameter
+        DEBUG: true ? "express:*" : ""
       }
     });
 
@@ -39,9 +43,8 @@ export class PublicAPIGatewayConstruct extends Construct {
       description: 'This service handles all public requests'
     });
 
-    const browseResource = api.root.addResource('browse-reports');
     const publicProxyIntegration = new apigateway.LambdaIntegration(publicGatewayProxyHandler);
-    browseResource.addMethod('GET', publicProxyIntegration);
+    api.root.addProxy({anyMethod: true, defaultIntegration: publicProxyIntegration});
 
     const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, `${configuration.COMMON.project}-hosted-zone`, {
       hostedZoneId: configuration.HOSTING.hostedZoneID,
