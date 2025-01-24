@@ -1,5 +1,6 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import {APIGatewayProxyHandler} from 'aws-lambda';
+import {S3Client, ListObjectsV2Command} from '@aws-sdk/client-s3';
+import {getTaskParametersFromReportPath} from "../../utils/utils";
 
 const s3Client = new S3Client({});
 const BUCKET_NAME = process.env.REPORTS_BUCKET_NAME!;
@@ -7,10 +8,8 @@ const BASE_URL = `https://${process.env.REPORTS_DOMAIN_NAME}`;
 
 export const handler: APIGatewayProxyHandler = async (event) => {
     try {
-        // List objects from S3
         const command = new ListObjectsV2Command({
             Bucket: BUCKET_NAME,
-            // Optional: You can add a Prefix here if you want to list specific folders
         });
 
         const response = await s3Client.send(command);
@@ -19,20 +18,33 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             throw new Error('No contents found in bucket');
         }
 
-        // console.log('response.Contents:', JSON.stringify(response.Contents));
-
-        // Filter for index.html files, excluding ones with 'page'
         const indexFiles = response.Contents
             .map(item => item?.Key ?? "")
             .filter(key => key &&
                 key.endsWith('index.html') &&
                 !key.includes('page'))
             .sort()
-            .reverse(); // Most recent first
+            .reverse();
 
-        // console.log('indexFiles:', JSON.stringify(indexFiles));
+        const groupedReports: { [key: string]: { [key: string]: { [key: string]: string[] } } } = {};
 
-        // Generate HTML
+        indexFiles.forEach(file => {
+            const {projectName, variantName, environment, timestamp} = getTaskParametersFromReportPath(file);
+            const date = new Date(timestamp).toLocaleDateString();
+
+            if (!groupedReports[projectName]) {
+                groupedReports[projectName] = {};
+            }
+            if (!groupedReports[projectName][variantName]) {
+                groupedReports[projectName][variantName] = {};
+            }
+            if (!groupedReports[projectName][variantName][environment]) {
+                groupedReports[projectName][variantName][environment] = [];
+            }
+
+            groupedReports[projectName][variantName][environment].push(`${BASE_URL}/${file} - ${date}`);
+        });
+
         const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -68,15 +80,24 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 </head>
 <body>
     <h1>Performance Reports</h1>
-    <ul class="reports-list">
-        ${indexFiles.map(file => `
-            <li>
-                <a href="${BASE_URL}/${file}">
-                    ${file.split('/').slice(-2)[0]} - ${file.split('/').slice(1, -2).join('/')}
+    ${Object.keys(groupedReports).map(projectName => `
+      <h2>${projectName}</h2>
+      ${Object.keys(groupedReports[projectName]).map(variantName => `
+        <h3>${variantName}</h3>
+        ${Object.keys(groupedReports[projectName][variantName]).map(environment => `
+          <h4>${environment}</h4>
+          <ul class="reports-list">
+            ${groupedReports[projectName][variantName][environment].map(file => `
+              <li>
+                <a href="${file.split(' - ')[0]}">
+                  ${file.split(' - ')[1]}
                 </a>
-            </li>
+              </li>
+            `).join('')}
+          </ul>
         `).join('')}
-    </ul>
+      `).join('')}
+    `).join('')}
 </body>
 </html>`;
 
