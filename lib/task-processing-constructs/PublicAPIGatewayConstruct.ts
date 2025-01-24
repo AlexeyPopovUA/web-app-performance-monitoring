@@ -1,4 +1,5 @@
 import {Construct} from 'constructs';
+import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -21,6 +22,9 @@ export class PublicAPIGatewayConstruct extends Construct {
       handler: 'public-api-proxy-handler.handler',
       logRetention: logs.RetentionDays.ONE_DAY,
       code: lambda.Code.fromAsset('dist/public-api'),
+      // important for the big amounts of S3 items
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
       environment: {
         REPORTS_BUCKET_NAME: configuration.REPORTING.bucketName,
         REPORTS_DOMAIN_NAME: configuration.REPORTING.reportsDomainName,

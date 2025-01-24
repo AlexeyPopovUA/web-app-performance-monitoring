@@ -19,6 +19,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             throw new Error('No contents found in bucket');
         }
 
+        // console.log('response.Contents:', JSON.stringify(response.Contents));
+
         // Filter for index.html files, excluding ones with 'page'
         const indexFiles = response.Contents
             .map(item => item?.Key ?? "")
@@ -27,6 +29,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 !key.includes('page'))
             .sort()
             .reverse(); // Most recent first
+
+        // console.log('indexFiles:', JSON.stringify(indexFiles));
 
         // Generate HTML
         const html = `
