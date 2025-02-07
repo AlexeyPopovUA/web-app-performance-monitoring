@@ -6,15 +6,15 @@ POST https://task.perf-mon.examples.oleksiipopov.com/request
 Content-Type: application/json
 
 {
-  "projectName": "ExampleProject",
+  "projectName": "Personal Website - Oleksii Popov",
   "baseUrl": "https://oleksiipopov.com",
   "environment": "production",
   "gitBranchOrTag": "main",
   "variants": [
     {
-      "variantName": "ContactPage",
+      "variantName": "Home",
       "urls": [
-        "https://oleksiipopov.com/contact/?silent"
+        "https://oleksiipopov.com/?silent"
       ],
       "iterations": 1,
       "browser": "chrome"

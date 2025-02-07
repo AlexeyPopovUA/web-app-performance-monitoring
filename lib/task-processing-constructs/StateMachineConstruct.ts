@@ -8,6 +8,7 @@ import * as core from "aws-cdk-lib/core";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
 import configuration from "../../cfg/configuration";
 
@@ -53,7 +54,8 @@ export class StateMachineConstruct extends Construct {
       code: lambda.Code.fromAsset('dist/steps/analysis-initiator-step'),
       environment: {
         TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName,
-        TEMPORARY_BUCKET_REGION: props.env.region
+        TEMPORARY_BUCKET_REGION: props.env.region,
+        GRAPHITE_AUTH: configuration.NETWORKING.grafana.graphite.GRAPHITE_AUTH
       }
     });
 
@@ -107,16 +109,25 @@ export class StateMachineConstruct extends Construct {
 
     taskDefinition.taskRole && temporaryReportBucket.grantReadWrite(taskDefinition.taskRole);
 
+    const graphiteAuthSecret = ecs.Secret.fromSecretsManager(
+      new secretsmanager.Secret(this, `${configuration.COMMON.project}-graphite-auth-secret`, {
+        secretName: configuration.NETWORKING.grafana.graphite.authSecretName,
+      })
+    );
+
     // Add container to the task definition
     const containerDefinition = taskDefinition.addContainer(`${configuration.COMMON.project}-sitespeedio-container`, {
-      image: ecs.ContainerImage.fromRegistry('sitespeedio/sitespeed.io:35.7.5-plus1'),
+      image: ecs.ContainerImage.fromRegistry('sitespeedio/sitespeed.io:36.2.5-plus1'),
       memoryLimitMiB: 8192,
       cpu: 4096,
-      command: ['https://oleksiipopov.com', '--summary'],
+      command: ['https://example.com', '--summary'],
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: `${configuration.COMMON.project}-sitespeedio-container`,
         logRetention: logs.RetentionDays.ONE_DAY
       }),
+      secrets: {
+        GRAPHITE_AUTH_1: graphiteAuthSecret
+      }
     });
 
     // TODO: Task to process each item in the map state. Initiates and waits a Fargate task to finish

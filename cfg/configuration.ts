@@ -27,5 +27,13 @@ export default {
     securityGroupName: `vpc-with-gateway-ecs-sg`,
     // NAT gateway and public IP for the NAT gateway are expensive things for a home lab
     enableNetworkEgress: process.env?.ENABLE_NETWORK_EGRESS === "true" || false,
+    grafana: {
+      graphite: {
+        authSecretName: "web-perf-mon.graphite.auth",
+        host: "graphite-prod-24-prod-eu-west-2.grafana.net",
+        user: "1729306", // TODO: Take from a secret manager,
+        GRAPHITE_AUTH: process.env?.GRAPHITE_AUTH || ""
+      }
+    }
   }
 };
