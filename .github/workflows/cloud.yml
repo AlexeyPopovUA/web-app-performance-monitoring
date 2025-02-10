@@ -12,8 +12,6 @@ env:
   AWS_ACCOUNT: ${{ vars.AWS_ACCOUNT }}
   AWS_DEPLOYMENT_REGION: ${{ vars.AWS_DEPLOYMENT_REGION }}
   HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
-  ENABLE_NETWORK_EGRESS: ${{ vars.ENABLE_NETWORK_EGRESS }}
-  GRAPHITE_AUTH: ${{ secrets.GRAPHITE_AUTH }}
 
 jobs:
   build_and_deploy:
@@ -50,6 +48,9 @@ jobs:
       - name: Deploy infrastructure
         if: env.SAFE_SOURCE_NAME == env.DEFAULT_BRANCH
         run: npm run cdk -- deploy --all --require-approval never
+        env:
+          GRAPHITE_AUTH: ${{ secrets.GRAPHITE_AUTH }}
+          IDLE_MODE: ${{ env.IDLE_MODE }}
 
       - name: Diff infrastructure
         if: env.SAFE_SOURCE_NAME != env.DEFAULT_BRANCH

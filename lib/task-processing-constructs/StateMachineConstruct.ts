@@ -140,7 +140,7 @@ export class StateMachineConstruct extends Construct {
         props.networking.securityGroup
       ],
       subnets: {
-        subnetType: configuration.NETWORKING.enableNetworkEgress ? ec2.SubnetType.PRIVATE_WITH_EGRESS : ec2.SubnetType.PRIVATE_ISOLATED,
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         availabilityZones: ["us-east-1a"],
       },
       cluster: ecs.Cluster.fromClusterAttributes(this, 'Cluster', {

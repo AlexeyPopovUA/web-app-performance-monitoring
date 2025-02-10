@@ -3,7 +3,9 @@ export default {
     project: "web-perf-mon",
     region: process.env?.AWS_DEPLOYMENT_REGION || "",
     account: process.env?.AWS_ACCOUNT || "",
-    defaultEnvironment: process.env?.DEFAULT_BRANCH || "main"
+    defaultEnvironment: process.env?.DEFAULT_BRANCH || "main",
+    // NAT gateway and public IP for the NAT gateway are expensive things for a home lab
+    idleMode: process.env?.IDLE_MODE === "true" || false,
   },
   HOSTING: {
     hostedZoneID: process.env?.HOSTED_ZONE_ID || "",
@@ -25,14 +27,13 @@ export default {
   NETWORKING: {
     vpcName: `vpc-with-gateway`,
     securityGroupName: `vpc-with-gateway-ecs-sg`,
-    // NAT gateway and public IP for the NAT gateway are expensive things for a home lab
-    enableNetworkEgress: process.env?.ENABLE_NETWORK_EGRESS === "true" || false,
     grafana: {
       graphite: {
         authSecretName: "web-perf-mon.graphite.auth",
         host: "graphite-prod-24-prod-eu-west-2.grafana.net",
         user: "1729306", // TODO: Take from a secret manager,
-        GRAPHITE_AUTH: process.env?.GRAPHITE_AUTH || ""
+        GRAPHITE_AUTH: process.env?.GRAPHITE_AUTH || "",
+        DOMAIN_NAME_RELAY: "carbon.performance",
       }
     }
   }
