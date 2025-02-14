@@ -1,9 +1,11 @@
+import * as path from "node:path";
 import {Construct} from 'constructs';
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as servicediscovery from "aws-cdk-lib/aws-servicediscovery";
+
 import configuration from "../../cfg/configuration";
 
 type ClusterConstructProps = cdk.StackProps & {
@@ -44,7 +46,7 @@ export class ClusterConstruct extends Construct {
 
     // Add container to the task definition
     const container = serviceTaskDefinition.addContainer(`${configuration.COMMON.project}-CarbonRelayNgContainer`, {
-      image: ecs.ContainerImage.fromAsset('./carbon-relay'),
+      image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, "./carbon-relay")),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'CarbonRelayNg',
         logRetention: logs.RetentionDays.ONE_DAY
