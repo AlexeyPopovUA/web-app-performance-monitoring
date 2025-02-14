@@ -50,7 +50,7 @@ jobs:
         run: npm run cdk -- deploy --all --require-approval never
         env:
           GRAPHITE_AUTH: ${{ secrets.GRAPHITE_AUTH }}
-          IDLE_MODE: ${{ env.IDLE_MODE }}
+          IDLE_MODE: ${{ vars.IDLE_MODE }}
 
       - name: Diff infrastructure
         if: env.SAFE_SOURCE_NAME != env.DEFAULT_BRANCH
