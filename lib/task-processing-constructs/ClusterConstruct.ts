@@ -40,17 +40,26 @@ export class ClusterConstruct extends Construct {
 
     // Define the task definition
     const serviceTaskDefinition = new ecs.FargateTaskDefinition(this, `${configuration.COMMON.project}-CarbonRelayNgTaskDef`, {
-      memoryLimitMiB: 1024,
-      cpu: 512,
+      memoryLimitMiB: 512,
+      cpu: 256,
     });
 
     // Add container to the task definition
     const container = serviceTaskDefinition.addContainer(`${configuration.COMMON.project}-CarbonRelayNgContainer`, {
-      image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, "./carbon-relay")),
+      image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, "./carbon-relay"), {
+        buildArgs: {
+          GRAPHITE_AUTH: configuration.NETWORKING.grafana.graphite.GRAPHITE_AUTH
+        }
+      }),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'CarbonRelayNg',
         logRetention: logs.RetentionDays.ONE_DAY
-      })
+      }),
+      healthCheck: {
+        command: [ "CMD-SHELL", "curl -f http://127.0.0.1:8081 || exit 1" ],
+        interval: cdk.Duration.seconds(35),
+        timeout: cdk.Duration.seconds(4),
+      }
     });
 
     container.addPortMappings({
@@ -75,7 +84,7 @@ export class ClusterConstruct extends Construct {
           name: `service`, // creates A record "sevice.carbon.performance" in the private hosted zone "carbon.performance" that points to alive service tasks
           cloudMapNamespace: new servicediscovery.PrivateDnsNamespace(this, `${configuration.COMMON.project}-carbon-relay-dns-namespace`, {
             vpc: props.networking.vpc,
-            name: configuration.NETWORKING.grafana.graphite.DOMAIN_NAME_RELAY
+            name: configuration.NETWORKING.grafana.graphite.DOMAIN_NAMESPACE_RELAY
           })
         }
       });

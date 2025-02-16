@@ -55,7 +55,7 @@ export class StateMachineConstruct extends Construct {
       environment: {
         TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName,
         TEMPORARY_BUCKET_REGION: props.env.region,
-        GRAPHITE_AUTH: configuration.NETWORKING.grafana.graphite.GRAPHITE_AUTH
+        DOMAIN_NAME_RELAY: configuration.NETWORKING.grafana.graphite.DOMAIN_NAME_RELAY
       }
     });
 

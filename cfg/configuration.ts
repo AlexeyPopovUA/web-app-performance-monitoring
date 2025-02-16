@@ -30,10 +30,9 @@ export default {
     grafana: {
       graphite: {
         authSecretName: "web-perf-mon.graphite.auth",
-        host: "graphite-prod-24-prod-eu-west-2.grafana.net",
-        user: "1729306", // TODO: Take from a secret manager,
         GRAPHITE_AUTH: process.env?.GRAPHITE_AUTH || "",
-        DOMAIN_NAME_RELAY: "carbon.performance",
+        DOMAIN_NAMESPACE_RELAY: "carbon.performance",
+        DOMAIN_NAME_RELAY: "service.carbon.performance",
       }
     }
   }
