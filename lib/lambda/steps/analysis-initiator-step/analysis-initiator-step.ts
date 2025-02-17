@@ -21,6 +21,8 @@ export async function handler(initialState: AnalysisInitiatorInput): Promise<Ana
       '--browsertime.firefox.includeResponseBodies',
       '--browsertime.chrome.includeResponseBodies',
       '--groupAlias', initialState.variantName,
+      // TODO Add alias support
+      "--slug", "firstView",
       '--sustainable.enable',
       '--plugins.add @sitespeed.io/plugin-lighthouse',
 
@@ -30,7 +32,8 @@ export async function handler(initialState: AnalysisInitiatorInput): Promise<Ana
       ...(initialState.reportPath ? ['--s3.path', initialState.reportPath] : []),
 
       // Graphite configuration
-      "--graphite.host", domainNameRelay
+      "--graphite.host", domainNameRelay,
+      "--graphite.addSlugToKey", "true",
     ],
   };
 }
