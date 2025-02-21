@@ -63,8 +63,13 @@ export class StateMachineConstruct extends Construct {
       runtime: lambda.Runtime.NODEJS_22_X,
       logRetention: logs.RetentionDays.ONE_DAY,
       handler: 'cleanup-step.handler',
-      code: lambda.Code.fromAsset('dist/steps/cleanup-step')
+      code: lambda.Code.fromAsset('dist/steps/cleanup-step'),
+      environment: {
+        TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName
+      }
     });
+
+    temporaryReportBucket.grantReadWrite(cleanupLambda);
 
     this.reportFinalizerLambda = new lambda.Function(this, `${configuration.COMMON.project}-report-finalizer`, {
       runtime: lambda.Runtime.NODEJS_22_X,
