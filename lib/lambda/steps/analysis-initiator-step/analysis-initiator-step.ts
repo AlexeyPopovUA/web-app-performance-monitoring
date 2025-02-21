@@ -2,8 +2,6 @@ import {AnalysisInitiatorOutput} from "./AnalysisInitiatorOutput";
 import {AnalysisInitiatorInput} from "./AnalysisInitiatorInput";
 
 export async function handler(initialState: AnalysisInitiatorInput): Promise<AnalysisInitiatorOutput> {
-  console.log('initiator', initialState);
-
   const temporaryBucketName = process.env.TEMPORARY_BUCKET_NAME;
   const temporaryBucketRegion = process.env.TEMPORARY_BUCKET_REGION;
   const domainNameRelay = process.env.DOMAIN_NAME_RELAY;
@@ -12,28 +10,48 @@ export async function handler(initialState: AnalysisInitiatorInput): Promise<Ana
     ...initialState,
 
     command: [
-      ...initialState.urls,
-      // Debug logging level
-      //'-vvv',
+      ...(initialState.urls),
 
-      '--browser', initialState.browser,
-      '--browsertime.iterations', initialState.iterations.toString(),
-      '--browsertime.firefox.includeResponseBodies',
-      '--browsertime.chrome.includeResponseBodies',
-      '--groupAlias', initialState.variantName,
-      // TODO Add alias support
-      "--slug", "firstView",
-      '--sustainable.enable',
-      '--plugins.add @sitespeed.io/plugin-lighthouse',
+      // Browser
+      "--browser", initialState.browser,
+      "--browsertime.iterations", initialState.iterations.toString(),
+      "--browsertime.preWarmServer", "true",
+      "--browsertime.firefox.includeResponseBodies",
+      "--browsertime.chrome.includeResponseBodies",
+      "--browsertime.chrome.includeResponseBodies", "html", // "all"
+      "--browsertime.chrome.timeline", "true",
+      "--browsertime.chrome.collectConsoleLog", "true",
+      "--browsertime.chrome.collectLongTasks", "true",
+      "--browsertime.viewPort", "1920x1080",
+      "--groupAlias", initialState.variantName,
+      "--browsertime.visualMetrics", "true",
+      "--browsertime.visualMetricsPerceptual", "true",
+      "--browsertime.visualMetricsContentful", "true",
 
       // S3 bucket configuration
-      ...(temporaryBucketName ? ['--s3.bucketname', temporaryBucketName] : []),
-      ...(temporaryBucketRegion ? ['--s3.region', temporaryBucketRegion] : []),
-      ...(initialState.reportPath ? ['--s3.path', initialState.reportPath] : []),
+      ...(temporaryBucketName ? ["--s3.bucketname", temporaryBucketName] : []),
+      ...(temporaryBucketRegion ? ["--s3.region", temporaryBucketRegion] : []),
+      ...(initialState.reportPath ? ["--s3.path", initialState.reportPath] : []),
 
       // Graphite configuration
       "--graphite.host", domainNameRelay,
+
+      // Sustainable
+      "--sustainable.enable", "false",
+
+      // Options
       "--graphite.addSlugToKey", "true",
+      "--copyLatestFilesToBase", "true",
+      // TODO Add alias support
+      "--slug", "firstView",
+      "--plugins.add", "@sitespeed.io/plugin-lighthouse",
+      // Debug logging level
+      //'-vvv',
+      //"--resultBaseURL", "https://reports.perf-mon.examples.oleksiipopov.com",
+
+      // HTML
+      //"--html.homeurl", "https://reports.perf-mon.examples.oleksiipopov.com",
+      //"--html.fetchHARFiles", "true"
     ],
   };
 }
