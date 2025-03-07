@@ -64,6 +64,7 @@ export class StateMachineConstruct extends Construct {
       logRetention: logs.RetentionDays.ONE_DAY,
       handler: 'cleanup-step.handler',
       code: lambda.Code.fromAsset('dist/steps/cleanup-step'),
+      timeout: core.Duration.minutes(5),
       environment: {
         TEMPORARY_BUCKET_NAME: configuration.REPORTING.temporaryBucketName
       }
