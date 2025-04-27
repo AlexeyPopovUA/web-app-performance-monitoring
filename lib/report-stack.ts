@@ -18,7 +18,7 @@ type ReportStackProps = cdk.StackProps & {
   }
 }
 
-export class ReportStack extends cdk.Stack {
+export class ReportStack extends cdk.NestedStack {
   constructor(scope: Construct, id: string, props: ReportStackProps) {
     super(scope, id, props);
 

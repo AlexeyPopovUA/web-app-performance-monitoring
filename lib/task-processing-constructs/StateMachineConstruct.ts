@@ -14,6 +14,8 @@ import configuration from "../../cfg/configuration";
 
 type Props = {
   sqsTaskHandler: lambda.Function;
+  temporaryReportBucket: s3.IBucket;
+  reportBucket: s3.IBucket;
   env: {
     region: string;
     account: string;
@@ -25,17 +27,9 @@ type Props = {
 }
 
 export class StateMachineConstruct extends Construct {
-  public readonly reportFinalizerLambda: lambda.IFunction;
 
   constructor(scope: Construct, id: string, props: Props) {
     super(scope, id);
-
-    const temporaryReportBucket = new s3.Bucket(this, `${configuration.COMMON.project}-temporary-report-bucket`, {
-      bucketName: configuration.REPORTING.temporaryBucketName,
-      removalPolicy: core.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
-    });
 
     // Create Step Functions state machine
     const startState = new sfn.Pass(this, `${configuration.COMMON.project}-start-state`);
@@ -70,9 +64,9 @@ export class StateMachineConstruct extends Construct {
       }
     });
 
-    temporaryReportBucket.grantReadWrite(cleanupLambda);
+    props.temporaryReportBucket.grantReadWrite(cleanupLambda);
 
-    this.reportFinalizerLambda = new lambda.Function(this, `${configuration.COMMON.project}-report-finalizer`, {
+    const reportFinalizerLambda = new lambda.Function(this, `${configuration.COMMON.project}-report-finalizer`, {
       runtime: lambda.Runtime.NODEJS_22_X,
       logRetention: logs.RetentionDays.ONE_DAY,
       handler: 'report-finalizer-step.handler',
@@ -85,7 +79,8 @@ export class StateMachineConstruct extends Construct {
       }
     });
 
-    temporaryReportBucket.grantRead(this.reportFinalizerLambda);
+    props.temporaryReportBucket.grantRead(reportFinalizerLambda);
+    props.reportBucket.grantWrite(reportFinalizerLambda);
 
     // Step to generate a list of tasks
     const generateTasks = new tasks.LambdaInvoke(this, 'Generate Tasks', {
@@ -113,7 +108,7 @@ export class StateMachineConstruct extends Construct {
       memoryLimitMiB: 8192,
     });
 
-    taskDefinition.taskRole && temporaryReportBucket.grantReadWrite(taskDefinition.taskRole);
+    props.temporaryReportBucket.grantReadWrite(taskDefinition.taskRole);
 
     const graphiteAuthSecret = ecs.Secret.fromSecretsManager(
       new secretsmanager.Secret(this, `${configuration.COMMON.project}-graphite-auth-secret`, {
@@ -135,8 +130,6 @@ export class StateMachineConstruct extends Construct {
         GRAPHITE_AUTH_1: graphiteAuthSecret
       }
     });
-
-    // TODO: sitespeed.io sends metrics to Grafana cloud
 
     const fargateTaskRunner = new tasks.EcsRunTask(this, `${configuration.COMMON.project}-run-fargate-task`, {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
@@ -163,7 +156,7 @@ export class StateMachineConstruct extends Construct {
 
     // Finalizer step to send email notifications
     const finalizeReport = new tasks.LambdaInvoke(this, `${configuration.COMMON.project}-finalize-report`, {
-      lambdaFunction: this.reportFinalizerLambda,
+      lambdaFunction: reportFinalizerLambda,
       outputPath: '$.Payload'
     });
 
