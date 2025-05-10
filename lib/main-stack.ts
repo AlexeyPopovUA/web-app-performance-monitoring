@@ -2,7 +2,7 @@ import {Construct} from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 
 import {SqsConstruct} from "./task-processing-constructs/SqsConstruct";
-import {StateMachineConstruct} from "./task-processing-constructs/StateMachineConstruct";
+//import {StateMachineConstruct} from "./task-processing-constructs/StateMachineConstruct";
 import {ClusterConstruct} from "./task-processing-constructs/ClusterConstruct";
 import {ApiGatewayConstruct} from "./api-gateway-construct";
 import {CloudfrontConstruct} from "./cloudfront-construct";
@@ -12,10 +12,6 @@ import {VpcConstruct} from "./vpc-construct";
 import configuration from "../cfg/configuration";
 
 type MainStackProps = cdk.StackProps & {
-  env: {
-    region: string;
-    account: string;
-  },
   certificateArn: string;
 }
 
@@ -55,18 +51,18 @@ export class MainStack extends cdk.NestedStack {
       env,
       reportBucket: s3BucketsConstruct.reportBucket,
       apiGateway: apiConstruct.api,
-      domainName: configuration.REPORTING.reportsDomainName,
+      domainName: configuration.HOSTING.domainName,
       certificateArn: props.certificateArn
     });
 
-    const stateMachineConstruction = new StateMachineConstruct(this, `${configuration.COMMON.project}-StateMachineConstruct`, {
-      sqsTaskHandler: sqsConstruct.sqsTaskHandler,
-      env,
-      networking: {
-        vpc,
-        securityGroup
-      }
-    });
+    // const stateMachineConstruction = new StateMachineConstruct(this, `${configuration.COMMON.project}-StateMachineConstruct`, {
+    //   sqsTaskHandler: sqsConstruct.sqsTaskHandler,
+    //   env,
+    //   networking: {
+    //     vpc,
+    //     securityGroup
+    //   }
+    // });
 
     // TODO Review this
     //this.finalizerRole = stateMachineConstruction.reportFinalizerLambda.role;

@@ -15,7 +15,7 @@ export class CertificatesStack extends cdk.NestedStack {
       zoneName: configuration.HOSTING.hostedZoneName
     });
 
-    const certificate = new cert.Certificate(this, `${configuration.COMMON.project}-ReportsCertificate`, {
+    const certificate = new cert.Certificate(this, `${configuration.COMMON.project}-Certificate`, {
       domainName: configuration.HOSTING.domainName,
       validation: cert.CertificateValidation.fromDns(hostedZone)
     });

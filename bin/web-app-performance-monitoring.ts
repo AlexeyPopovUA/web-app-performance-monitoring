@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
+import {Environment} from "aws-cdk-lib/core/lib/environment";
 
 import {MainStack} from "../lib/main-stack";
 import {CertificatesStack} from "../lib/certificates-stack";
@@ -8,13 +9,22 @@ import configuration from "../cfg/configuration";
 
 const app = new cdk.App();
 
-const rootStack = new cdk.Stack(app, `${configuration.COMMON.project}-RootStack`);
+const env: Environment = {
+  account: configuration.COMMON.account,
+  region: configuration.COMMON.region
+}
 
-const certificatesStack = new CertificatesStack(rootStack, `${configuration.COMMON.project}-CertificatesStack`);
+const rootStack = new cdk.Stack(app, `${configuration.COMMON.project}-RootStack`, {
+  env
+});
 
-const taskProcessingStack = new MainStack(rootStack, `${configuration.COMMON.project}-TaskProcessingStack`, {
+const certificatesStack = new CertificatesStack(rootStack, `${configuration.COMMON.project}-CertificatesStack`, {
+  env
+});
 
-
+const mainStack = new MainStack(rootStack, `${configuration.COMMON.project}-MainStack`, {
+  env,
+  certificateArn: certificatesStack.certificateArn
 });
 
 // new ReportStack(app, `${configuration.COMMON.project}-ReportStack`, {

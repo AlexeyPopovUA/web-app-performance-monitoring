@@ -7,14 +7,12 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 import configuration from "../cfg/configuration";
 
 interface CloudFrontConstructProps {
-  env: {
-    region: string;
-    account: string;
-  }
+  env: cdk.Environment
   reportBucket: s3.IBucket;
   apiGateway: apigateway.RestApi;
   domainName: string;
@@ -51,20 +49,29 @@ export class CloudfrontConstruct extends Construct {
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
     });
 
-    distribution.addBehavior('/reports/*', new origins.S3StaticWebsiteOrigin(props.reportBucket), {
-      allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-    });
+    // Add S3 bucket as origin with OAC
+    const s3Origin = new origins.S3Origin(props.reportBucket);
+
+    distribution.addBehavior('/reports/*',
+      s3Origin,
+      {
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+      }
+    );
+
+    // Remove manual bucket policy, let CDK manage OAC permissions
+    // (No custom bucketPolicy or addToResourcePolicy here)
 
     new route53.ARecord(this, `${configuration.COMMON.project}-reports-a-record`, {
-      recordName: configuration.REPORTING.reportsDomainName,
+      recordName: configuration.HOSTING.domainName,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution))
     });
 
     new route53.AaaaRecord(this, `${configuration.COMMON.project}-reports-aaaa-record`, {
-      recordName: configuration.REPORTING.reportsDomainName,
+      recordName: configuration.HOSTING.domainName,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution))
     });

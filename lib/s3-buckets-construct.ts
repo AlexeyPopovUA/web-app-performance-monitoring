@@ -16,11 +16,21 @@ export class S3BucketsConstruct extends Construct {
   constructor(scope: Construct, id: string, props: Props) {
     super(scope, id);
 
+    // Create report bucket with proper configuration for CloudFront access
     this.reportBucket = new s3.Bucket(this, `${props.project}-report-bucket`, {
       bucketName: props.bucketName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      // Ensure content-type is set correctly for web serving
+      cors: [
+        {
+          allowedHeaders: ['*'],
+          allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.HEAD],
+          allowedOrigins: ['*'],
+          maxAge: 3000
+        }
+      ]
     });
 
     this.temporaryReportBucket = new s3.Bucket(this, `${props.project}-temporary-report-bucket`, {
