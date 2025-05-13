@@ -5,7 +5,7 @@ import {ListObjectsV2CommandInput} from "@aws-sdk/client-s3/dist-types/commands/
 
 
 const BUCKET_NAME = process.env.REPORTS_BUCKET_NAME!;
-const BASE_URL = `https://${process.env.REPORTS_DOMAIN_NAME}`;
+const BASE_URL = `https://${process.env.STATIC_REPORT_BASE_PATH}`;
 
 type SingleReport = {
   projectName: string;

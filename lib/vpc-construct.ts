@@ -1,12 +1,10 @@
 import {Construct} from "constructs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as cdk from "aws-cdk-lib";
 
 type Props = {
   project: string;
-  env: {
-    region: string;
-    account: string;
-  }
+  env: Required<cdk.Environment>
   securityGroupName: string;
   vpcName: string;
 }

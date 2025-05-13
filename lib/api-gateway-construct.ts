@@ -9,10 +9,7 @@ import {IBucket} from "aws-cdk-lib/aws-s3";
 
 interface ApiGatewayStackProps {
   project: string;
-  env: {
-    account: string;
-    region: string;
-  }
+  env: Required<cdk.Environment>;
   taskQueue: sqs.Queue;
   reportBucket: IBucket;
   staticReportBasePath: string;
@@ -37,7 +34,7 @@ export class ApiGatewayConstruct extends Construct {
       environment: {
         REPORTS_BUCKET_NAME: props.reportBucket.bucketName,
         // TODO Rename the env var
-        REPORTS_DOMAIN_NAME: props.staticReportBasePath,
+        STATIC_REPORT_BASE_PATH: props.staticReportBasePath,
         REGION: props.env.region,
         // TODO Take from a parameter
         DEBUG: true ? "express:*" : ""

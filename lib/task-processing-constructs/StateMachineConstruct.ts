@@ -1,4 +1,5 @@
 import {Construct} from 'constructs';
+import * as cdk from "aws-cdk-lib";
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -16,10 +17,7 @@ type Props = {
   sqsTaskHandler: lambda.Function;
   temporaryReportBucket: s3.IBucket;
   reportBucket: s3.IBucket;
-  env: {
-    region: string;
-    account: string;
-  },
+  env: Required<cdk.Environment>,
   networking: {
     vpc: ec2.IVpc;
     securityGroup: ec2.ISecurityGroup;

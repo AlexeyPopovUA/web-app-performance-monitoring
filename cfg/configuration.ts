@@ -11,16 +11,12 @@ export default {
     hostedZoneID: process.env?.HOSTED_ZONE_ID || "",
     hostedZoneName: "oleksiipopov.com",
     staticDomainName: "oleksiipopov.com",
-    // todo Migrate task API to the generic public API gateway
     domainName: "perf-mon.examples.oleksiipopov.com",
-    taskApiDomainName: "task.perf-mon.examples.oleksiipopov.com", // TODO Move to perf-mon.examples.oleksiipopov.com/api/task
-    apiDomainName: "api.perf-mon.examples.oleksiipopov.com" // TODO Move to perf-mon.examples.oleksiipopov.com/api
   },
   REPORTING: {
     bucketName: "web-perf-mon-reports",
     temporaryBucketName: "web-perf-mon-reports-temp",
-    reportsDomainName: "reports.perf-mon.examples.oleksiipopov.com", // perf-mon.examples.oleksiipopov.com/reports
-    staticReportBasePath: "https://reports.perf-mon.examples.oleksiipopov.com/reports"
+    staticReportBasePath: "https://perf-mon.examples.oleksiipopov.com/reports"
   },
   ANALYSIS: {
     clusterName: 'web-perf-mon-cluster',

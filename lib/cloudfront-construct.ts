@@ -7,12 +7,11 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
-import * as iam from 'aws-cdk-lib/aws-iam';
 
 import configuration from "../cfg/configuration";
 
 interface CloudFrontConstructProps {
-  env: cdk.Environment
+  env: Required<cdk.Environment>
   reportBucket: s3.IBucket;
   apiGateway: apigateway.RestApi;
   domainName: string;
@@ -50,7 +49,9 @@ export class CloudfrontConstruct extends Construct {
     });
 
     // Add S3 bucket as origin with OAC
-    const s3Origin = new origins.S3Origin(props.reportBucket);
+    const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(props.reportBucket, {
+      originAccessLevels: [cloudfront.AccessLevel.READ, cloudfront.AccessLevel.LIST],
+    });
 
     distribution.addBehavior('/reports/*',
       s3Origin,
