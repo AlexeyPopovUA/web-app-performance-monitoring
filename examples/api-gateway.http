@@ -2,7 +2,7 @@
 
 # Valid simple single request
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {
@@ -27,7 +27,7 @@ Content-Type: application/json
 
 # Valid multi-request
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {
@@ -68,7 +68,7 @@ Content-Type: application/json
 # Invalid request:
 # Non-unique variant names
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {
@@ -100,7 +100,7 @@ Content-Type: application/json
 
 # Invalid JSON payload
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {bla}
@@ -109,7 +109,7 @@ Content-Type: application/json
 
 # Validation error
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {

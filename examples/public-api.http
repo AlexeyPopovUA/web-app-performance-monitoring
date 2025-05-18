@@ -2,6 +2,6 @@
 
 # Valid simple single request
 
-GET https://api.perf-mon.examples.oleksiipopov.com/browse-reports
+GET https://perf-mon.examples.oleksiipopov.com/api/browse-reports
 
 #######

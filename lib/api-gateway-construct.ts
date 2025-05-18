@@ -55,6 +55,42 @@ export class ApiGatewayConstruct extends Construct {
       },
     });
 
+    // Define API Gateway Model for /api/task validation (close to Yup schema)
+    const taskModel = this.api.addModel('TaskModel', {
+      contentType: 'application/json',
+      modelName: 'TaskModel',
+      schema: {
+        type: apigateway.JsonSchemaType.OBJECT,
+        required: ['projectName', 'baseUrl', 'environment', 'variants'],
+        properties: {
+          projectName: { type: apigateway.JsonSchemaType.STRING },
+          baseUrl: { type: apigateway.JsonSchemaType.STRING },
+          environment: { type: apigateway.JsonSchemaType.STRING },
+          gitBranchOrTag: { type: apigateway.JsonSchemaType.STRING },
+          variants: {
+            type: apigateway.JsonSchemaType.ARRAY,
+            minItems: 1,
+            items: {
+              type: apigateway.JsonSchemaType.OBJECT,
+              required: ['variantName', 'urls', 'iterations', 'browser'],
+              properties: {
+                variantName: { type: apigateway.JsonSchemaType.STRING },
+                urls: {
+                  type: apigateway.JsonSchemaType.ARRAY,
+                  items: { type: apigateway.JsonSchemaType.STRING }
+                },
+                iterations: { type: apigateway.JsonSchemaType.NUMBER },
+                browser: {
+                  type: apigateway.JsonSchemaType.STRING,
+                  enum: ['chrome', 'firefox', 'edge']
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
     // Create role for sending messages to SQS
     const sqsIntegrationRole = new iam.Role(this, `${props.project}-SqsIntegrationRole`, {
       assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
@@ -88,7 +124,15 @@ export class ApiGatewayConstruct extends Construct {
       },
     });
 
+    // Add POST method with request validation
     taskResource.addMethod('POST', integration, {
+      requestModels: {
+        'application/json': taskModel
+      },
+      requestValidator: this.api.addRequestValidator('TaskBodyValidator', {
+        validateRequestBody: true,
+        validateRequestParameters: false
+      }),
       methodResponses: [{ statusCode: '200' }],
     });
 
