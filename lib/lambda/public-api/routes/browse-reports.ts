@@ -3,9 +3,8 @@ import {S3Client, ListObjectsV2Command} from '@aws-sdk/client-s3';
 import {getTaskParametersFromReportPath} from "../../../utils/utils";
 import {ListObjectsV2CommandInput} from "@aws-sdk/client-s3/dist-types/commands/ListObjectsV2Command";
 
-
 const BUCKET_NAME = process.env.REPORTS_BUCKET_NAME!;
-const BASE_URL = `https://${process.env.STATIC_REPORT_BASE_PATH}`;
+const STATIC_REPORT_BASE_URL = process.env.STATIC_REPORT_BASE_URL || "";
 
 type SingleReport = {
   projectName: string;
@@ -138,7 +137,7 @@ export const browseReportsHandler = async (req: Request<unknown, unknown, unknow
               <h4>${variantName}</h4>
               <ul class="reports-list report-group">
                 ${groupedReports[projectName][environmentName][variantName].map(data => `
-                  <li><a href="${BASE_URL}/${data.path}">${data.date}</a></li>
+                  <li><a href="${STATIC_REPORT_BASE_URL}${data.path}">${data.date}</a></li>
                 `).join('')}
               </ul>
             `).join('')}

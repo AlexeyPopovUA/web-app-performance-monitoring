@@ -12,7 +12,7 @@ interface ApiGatewayStackProps {
   env: Required<cdk.Environment>;
   taskQueue: sqs.Queue;
   reportBucket: IBucket;
-  staticReportBasePath: string;
+  staticReportBaseURL: string;
 }
 
 export class ApiGatewayConstruct extends Construct {
@@ -34,7 +34,7 @@ export class ApiGatewayConstruct extends Construct {
       environment: {
         REPORTS_BUCKET_NAME: props.reportBucket.bucketName,
         // TODO Rename the env var
-        STATIC_REPORT_BASE_PATH: props.staticReportBasePath,
+        STATIC_REPORT_BASE_URL: props.staticReportBaseURL,
         REGION: props.env.region,
         // TODO Take from a parameter
         DEBUG: true ? "express:*" : ""

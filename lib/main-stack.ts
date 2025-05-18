@@ -44,7 +44,7 @@ export class MainStack extends cdk.NestedStack {
       taskQueue: sqsConstruct.taskQueue,
       env,
       reportBucket: s3BucketsConstruct.reportBucket,
-      staticReportBasePath: configuration.REPORTING.staticReportBasePath,
+      staticReportBaseURL: configuration.REPORTING.staticReportBaseURL,
     });
 
     const cloudFrontConstruct = new CloudfrontConstruct(this, `${configuration.COMMON.project}-CloudfrontConstruct`, {
