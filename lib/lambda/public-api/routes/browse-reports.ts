@@ -1,7 +1,8 @@
-import {APIGatewayProxyHandler} from 'aws-lambda';
+import {Request, Response} from "express";
 import {S3Client, ListObjectsV2Command} from '@aws-sdk/client-s3';
-import {getTaskParametersFromReportPath} from "../../utils/utils";
+import {getTaskParametersFromReportPath} from "../../../utils/utils";
 import {ListObjectsV2CommandInput} from "@aws-sdk/client-s3/dist-types/commands/ListObjectsV2Command";
+
 
 const BUCKET_NAME = process.env.REPORTS_BUCKET_NAME!;
 const BASE_URL = `https://${process.env.STATIC_REPORT_BASE_PATH}`;
@@ -53,7 +54,10 @@ async function listHtmlFiles(s3Client: S3Client, continuationToken?: string): Pr
 
 // TODO Support request of a list of projects
 // TODO Support request of a list of reports for a specific project
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const browseReportsHandler = async (req: Request<unknown, unknown, unknown, {
+  environment: string;
+}>, res: Response) => {
+  console.log('browseResourcesRouteHandler');
   try {
     const indexFiles = await listHtmlFiles(new S3Client({}));
 
@@ -145,22 +149,15 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 </body>
 </html>`;
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-      body: html,
-    };
+    res.status(200);
+    res.contentType('text/html');
+    res.send(html);
 
   } catch (error) {
     console.error('Error:', error);
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-      body: '<h1>Error retrieving reports</h1><p>Please try again later.</p>',
-    };
+
+    res.status(500);
+    res.contentType('text/html');
+    res.send('<h1>Error retrieving reports</h1><p>Please try again later.</p>');
   }
 };

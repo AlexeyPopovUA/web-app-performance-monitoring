@@ -26,14 +26,3 @@ const mainStack = new MainStack(rootStack, `${configuration.COMMON.project}-Main
   env,
   certificateArn: certificatesStack.certificateArn
 });
-
-// new ReportStack(app, `${configuration.COMMON.project}-ReportStack`, {
-//   bucketClients: {
-//     finalReportWriterRole: taskProcessingStack.finalizerRole,
-//     publicAPIRole: taskProcessingStack.publicAPIRole
-//   },
-//   env: {
-//     account: configuration.COMMON.account,
-//     region: configuration.COMMON.region
-//   }
-// });

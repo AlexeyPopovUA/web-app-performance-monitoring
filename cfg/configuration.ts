@@ -16,7 +16,7 @@ export default {
   REPORTING: {
     bucketName: "web-perf-mon-reports",
     temporaryBucketName: "web-perf-mon-reports-temp",
-    staticReportBasePath: "https://perf-mon.examples.oleksiipopov.com/reports"
+    staticReportBasePath: "https://perf-mon.examples.oleksiipopov.com/"
   },
   ANALYSIS: {
     clusterName: 'web-perf-mon-cluster',

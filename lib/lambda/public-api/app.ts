@@ -3,7 +3,7 @@ import cors from "cors";
 
 import {getCorsCfg} from "./lib/configureCors";
 import {demoRouteHandler} from "./routes/demo";
-import {browseResourcesRouteHandler} from "./routes/browse-resources";
+import {browseReportsHandler} from "./routes/browse-reports";
 
 const app = express();
 
@@ -17,8 +17,8 @@ router.use(express.urlencoded({extended: true}));
 /**
  * This route is for Node.js or mobile applications where environment name is sent via "environment" query parameter
  */
-router.get("/demo", demoRouteHandler);
-router.get("/browse-resources", browseResourcesRouteHandler);
+router.get("/api/demo", demoRouteHandler);
+router.get("/api/browse-reports", browseReportsHandler);
 
 app.use("/", router);
 
