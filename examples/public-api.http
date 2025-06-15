@@ -1,7 +1,129 @@
 #######
+# /api/browse-reports
+#######
 
-# Valid simple single request
+# Valid simple single request /api/browse-reports
 
 GET https://perf-mon.examples.oleksiipopov.com/api/browse-reports
 
+
 #######
+# /api/task
+#######
+
+# Valid simple single request
+
+POST https://perf-mon.examples.oleksiipopov.com/api/task
+Content-Type: application/json
+
+{
+  "projectName": "Personal Website - Oleksii Popov",
+  "baseUrl": "https://oleksiipopov.com",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "variants": [
+    {
+      "variantName": "Home",
+      "urls": [
+        "https://oleksiipopov.com/?silent"
+      ],
+      "iterations": 1,
+      "browser": "chrome"
+    }
+  ]
+}
+
+
+#######
+
+# Valid multi-request
+
+POST https://perf-mon.examples.oleksiipopov.com/api/task
+Content-Type: application/json
+
+{
+  "projectName": "Personal Website - Oleksii Popov",
+  "baseUrl": "https://oleksiipopov.com",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "variants": [
+    {
+      "variantName": "Home",
+      "urls": [
+        "https://oleksiipopov.com/?silent"
+      ],
+      "iterations": 2,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Resume",
+      "urls": [
+        "https://oleksiipopov.com/resume/?silent"
+      ],
+      "iterations": 2,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "Portfolio",
+      "urls": [
+        "https://oleksiipopov.com/portfolio/?silent"
+      ],
+      "iterations": 2,
+      "browser": "chrome"
+    }
+  ]
+}
+
+#######
+
+# Invalid request:
+# Non-unique variant names
+
+POST https://perf-mon.examples.oleksiipopov.com/api/task
+Content-Type: application/json
+
+{
+  "projectName": "ExampleProject",
+  "baseUrl": "https://oleksiipopov.com",
+  "environment": "production",
+  "gitBranchOrTag": "main",
+  "variants": [
+    {
+      "variantName": "NAME",
+      "urls": [
+        "https://oleksiipopov.com/blog/react-18-vs-react-19/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    },
+    {
+      "variantName": "NAME",
+      "urls": [
+        "https://oleksiipopov.com/resume/?silent"
+      ],
+      "iterations": 3,
+      "browser": "chrome"
+    }
+  ]
+}
+
+#######
+
+# Invalid JSON payload
+
+POST https://perf-mon.examples.oleksiipopov.com/api/task
+Content-Type: application/json
+
+{bla}
+
+######
+
+# Validation error
+
+POST https://perf-mon.examples.oleksiipopov.com/api/task
+Content-Type: application/json
+
+{
+  "projectName": "ExampleProject",
+  "baseUrl": "https://oleksiipopov.com"
+}
