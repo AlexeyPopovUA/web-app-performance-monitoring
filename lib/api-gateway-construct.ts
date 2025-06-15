@@ -96,6 +96,18 @@ export class ApiGatewayConstruct extends Construct {
       assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
     });
 
+    // Grant explicit SQS permissions to the role
+    sqsIntegrationRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'sqs:SendMessage',
+        'sqs:GetQueueUrl',
+        'sqs:GetQueueAttributes'
+      ],
+      resources: [props.taskQueue.queueArn],
+      effect: iam.Effect.ALLOW
+    }));
+
+    // Also grant permissions using the CDK helper
     props.taskQueue.grantSendMessages(sqsIntegrationRole);
 
     // Create API endpoints
@@ -112,15 +124,47 @@ export class ApiGatewayConstruct extends Construct {
         requestParameters: {
           'integration.request.header.Content-Type': "'application/x-www-form-urlencoded'",
         },
-        requestTemplates: {
-          'application/json': 'Action=SendMessage&MessageBody=$util.urlEncode($input.body)',
-        },
         integrationResponses: [{
           statusCode: '200',
           responseTemplates: {
             'application/json': '{"status":"task queued"}',
           },
+        }, {
+          // Add error response for validation failures
+          statusCode: '400',
+          selectionPattern: '4\\d{2}',
+          responseTemplates: {
+            'application/json': '{"error": "Bad Request", "message": $input.json(\'$.Error.Message\')}'
+          }
         }],
+        // Add request validator for unique variantName
+        requestTemplates: {
+          'application/json': `## Validation for unique variantName
+#set($inputRoot = $input.path('$'))
+#set($variantNames = [])
+#set($isDuplicate = false)
+#set($duplicateName = "")
+
+## Check for duplicate variantNames
+#foreach($variant in $inputRoot.variants)
+  #set($variantName = $variant.variantName)
+  #if($variantNames.contains($variantName))
+    #set($isDuplicate = true)
+    #set($duplicateName = $variantName)
+    #break
+  #else
+    #set($variantNames.add($variantName))
+  #end
+#end
+
+## Return error if duplicate found, otherwise proceed with SQS action
+#if($isDuplicate)
+  #set($context.responseOverride.status = 400)
+  {"errorMessage": "Duplicate variantName: '$duplicateName'. All variantNames must be unique."}
+#else
+Action=SendMessage&MessageBody=$util.urlEncode($input.body)
+#end`
+        },
       },
     });
 
@@ -133,7 +177,10 @@ export class ApiGatewayConstruct extends Construct {
         validateRequestBody: true,
         validateRequestParameters: false
       }),
-      methodResponses: [{ statusCode: '200' }],
+      methodResponses: [
+        { statusCode: '200' },
+        { statusCode: '400' },
+      ],
     });
 
     // Browse reports endpoint

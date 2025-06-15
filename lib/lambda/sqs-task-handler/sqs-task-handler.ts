@@ -20,8 +20,20 @@ const CommonTaskPropsSchema = z.object({
 });
 
 // Combined schema for TaskGeneratorInput
-const TaskInputSchema = CommonTaskPropsSchema.extend({
+const TaskGeneratorInputSchema = CommonTaskPropsSchema.extend({
   variants: z.array(TaskVariantSchema)
+    // Add custom validation to ensure variant names are unique
+    .refine(
+      variants => {
+        const variantNames = variants.map(v => v.variantName);
+        const uniqueNames = new Set(variantNames);
+        return uniqueNames.size === variantNames.length;
+      },
+      {
+        message: "Variant names must be unique within a task",
+        path: ["variants"]
+      }
+    )
 });
 
 export const handler: SQSHandler = async (event) => {
@@ -33,7 +45,7 @@ export const handler: SQSHandler = async (event) => {
       console.log('SQSHandler body:', body);
 
       // Validate the body against the TaskGeneratorInput schema
-      const validationResult = TaskInputSchema.safeParse(body);
+      const validationResult = TaskGeneratorInputSchema.safeParse(body);
 
       if (!validationResult.success) {
         console.error('Validation failed:', validationResult.error.format());
