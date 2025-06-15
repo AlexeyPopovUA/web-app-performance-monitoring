@@ -17,7 +17,7 @@ export class SqsConstruct extends Construct {
     // Create SQS queue
     this.taskQueue = new sqs.Queue(this, `${configuration.COMMON.project}-task-queue`, {
       visibilityTimeout: cdk.Duration.seconds(30),
-      retentionPeriod: cdk.Duration.days(1)
+      retentionPeriod: cdk.Duration.days(1),
     });
 
     // Create Lambda function for polling SQS
@@ -35,6 +35,9 @@ export class SqsConstruct extends Construct {
     this.taskQueue.grantConsumeMessages(this.sqsTaskHandler);
 
     // Add SQS event source to the poller Lambda
-    this.sqsTaskHandler.addEventSource(new eventSources.SqsEventSource(this.taskQueue, {batchSize: 1}));
+    this.sqsTaskHandler.addEventSource(new eventSources.SqsEventSource(this.taskQueue, {
+      batchSize: 5,
+      maxBatchingWindow: cdk.Duration.seconds(30)
+    }));
   }
 }
