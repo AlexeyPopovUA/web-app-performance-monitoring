@@ -9,3 +9,4 @@ node_modules
 .cdk.staging
 cdk.out
 /dist/
+/examples/http-client.private.env.json

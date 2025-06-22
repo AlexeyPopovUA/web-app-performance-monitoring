@@ -42,10 +42,13 @@ export class CloudfrontConstruct extends Construct {
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        originRequestPolicy: new cloudfront.OriginRequestPolicy(this, `${configuration.COMMON.project}-proxy-origin-request-policy`, {
+          headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("x-api-key")
+        })
       },
       domainNames: [props.domainName],
       certificate,
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_100
     });
 
     // Add S3 bucket as origin with OAC

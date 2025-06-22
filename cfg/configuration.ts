@@ -13,6 +13,9 @@ export default {
     staticDomainName: "oleksiipopov.com",
     domainName: "perf-mon.examples.oleksiipopov.com",
   },
+  SECURITY: {
+    apiKey: process.env?.API_KEY || `perf-mon-key-${Date.now()}` // Generate unique default key
+  },
   REPORTING: {
     bucketName: "web-perf-mon-reports",
     temporaryBucketName: "web-perf-mon-reports-temp",

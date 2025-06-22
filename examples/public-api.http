@@ -11,10 +11,11 @@ GET https://perf-mon.examples.oleksiipopov.com/api/browse-reports
 # /api/task
 #######
 
-# Valid simple single request
+# Valid simple single request - with direct API key
 
 POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
+x-api-key: {{apiKey}}
 
 {
   "projectName": "Personal Website - Oleksii Popov",
@@ -40,6 +41,7 @@ Content-Type: application/json
 
 POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
+x-api-key: {{apiKey}}
 
 {
   "projectName": "Personal Website - Oleksii Popov",
@@ -81,6 +83,7 @@ Content-Type: application/json
 
 POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
+x-api-key: {{apiKey}}
 
 {
   "projectName": "ExampleProject",
@@ -113,6 +116,7 @@ Content-Type: application/json
 
 POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
+x-api-key: {{apiKey}}
 
 {bla}
 
@@ -122,6 +126,7 @@ Content-Type: application/json
 
 POST https://perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
+x-api-key: {{apiKey}}
 
 {
   "projectName": "ExampleProject",

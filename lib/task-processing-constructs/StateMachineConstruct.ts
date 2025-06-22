@@ -3,7 +3,6 @@ import * as cdk from "aws-cdk-lib";
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as core from "aws-cdk-lib/core";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -14,7 +13,6 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import configuration from "../../cfg/configuration";
 
 type Props = {
-  sqsTaskHandler: lambda.Function;
   temporaryReportBucket: s3.IBucket;
   reportBucket: s3.IBucket;
   env: Required<cdk.Environment>,
@@ -25,6 +23,8 @@ type Props = {
 }
 
 export class StateMachineConstruct extends Construct {
+  // Expose the state machine so we can access its ARN
+  public readonly stateMachine: sfn.StateMachine;
 
   constructor(scope: Construct, id: string, props: Props) {
     super(scope, id);
@@ -170,21 +170,8 @@ export class StateMachineConstruct extends Construct {
       .next(finalizeReport)
       .next(cleanupReport);
 
-    const stateMachine = new sfn.StateMachine(this, `${configuration.COMMON.project}-state-machine`, {
+    this.stateMachine = new sfn.StateMachine(this, `${configuration.COMMON.project}-state-machine`, {
       definitionBody: sfn.DefinitionBody.fromChainable(definition)
     });
-
-    // Grant Lambda permissions to start Step Functions executions
-    stateMachine.grantStartExecution(props.sqsTaskHandler);
-    stateMachine.grantRead(props.sqsTaskHandler);
-
-    // Add IAM role for Lambda to list Step Functions executions
-    props.sqsTaskHandler.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['states:ListExecutions'],
-      resources: [stateMachine.stateMachineArn]
-    }));
-
-    // Set environment variable for sqsTaskHandler
-    props.sqsTaskHandler.addEnvironment('STATE_MACHINE_ARN', stateMachine.stateMachineArn);
   }
 }

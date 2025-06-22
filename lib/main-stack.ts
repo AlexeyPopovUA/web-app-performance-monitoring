@@ -1,7 +1,6 @@
 import {Construct} from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 
-import {SqsConstruct} from "./task-processing-constructs/SqsConstruct";
 import {StateMachineConstruct} from "./task-processing-constructs/StateMachineConstruct";
 import {ClusterConstruct} from "./task-processing-constructs/ClusterConstruct";
 import {ApiGatewayConstruct} from "./api-gateway-construct";
@@ -31,20 +30,29 @@ export class MainStack extends cdk.NestedStack {
       vpcName: configuration.NETWORKING.vpcName
     });
 
-    const sqsConstruct = new SqsConstruct(this, `${configuration.COMMON.project}-SqsConstruct`);
-
     const s3BucketsConstruct = new S3BucketsConstruct(this, `${configuration.COMMON.project}-S3BucketsConstruct`, {
       bucketName: configuration.REPORTING.bucketName,
       temporaryBucketName: configuration.REPORTING.temporaryBucketName,
       project: configuration.COMMON.project,
     });
 
+    const stateMachineConstruction = new StateMachineConstruct(this, `${configuration.COMMON.project}-StateMachineConstruct`, {
+      env,
+      temporaryReportBucket: s3BucketsConstruct.temporaryReportBucket,
+      reportBucket: s3BucketsConstruct.reportBucket,
+      networking: {
+        vpc,
+        securityGroup
+      }
+    });
+
     const apiConstruct = new ApiGatewayConstruct(this, `${configuration.COMMON.project}-APIGatewayConstruct`, {
       project: configuration.COMMON.project,
-      taskQueue: sqsConstruct.taskQueue,
       env,
       reportBucket: s3BucketsConstruct.reportBucket,
       staticReportBaseURL: configuration.REPORTING.staticReportBaseURL,
+      stateMachineArn: stateMachineConstruction.stateMachine.stateMachineArn,
+      apiKey: configuration.SECURITY.apiKey
     });
 
     const cloudFrontConstruct = new CloudfrontConstruct(this, `${configuration.COMMON.project}-CloudfrontConstruct`, {
@@ -55,16 +63,6 @@ export class MainStack extends cdk.NestedStack {
       certificateArn: props.certificateArn
     });
 
-    const stateMachineConstruction = new StateMachineConstruct(this, `${configuration.COMMON.project}-StateMachineConstruct`, {
-      env,
-      temporaryReportBucket: s3BucketsConstruct.temporaryReportBucket,
-      reportBucket: s3BucketsConstruct.reportBucket,
-      sqsTaskHandler: sqsConstruct.sqsTaskHandler,
-      networking: {
-        vpc,
-        securityGroup
-      }
-    });
 
     new ClusterConstruct(this, `${configuration.COMMON.project}-ClusterConstruct`, {
       networking: {
