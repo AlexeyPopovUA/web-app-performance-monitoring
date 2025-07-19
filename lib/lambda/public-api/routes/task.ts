@@ -1,6 +1,6 @@
 import {Request, Response} from 'express';
 import {z} from 'zod';
-import {SFN} from '@aws-sdk/client-sfn';
+import {ExecutionStatus, SFN} from '@aws-sdk/client-sfn';
 
 const stepfunctions = new SFN();
 
@@ -59,25 +59,74 @@ export const postTask = async (req: Request, res: Response) => {
       return;
     }
 
-    // Extract the validated data
     const validatedBody = validationResult.data;
 
-    // Generate a unique execution name
-    const executionId = `execution-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    // validatedBody contains the input validated against the Zod schema.
+    // We iterate over each variant to create and start a Step Function execution.
+    for (const variant of validatedBody.variants) {
+      // Generate a unique execution name for each variant.
+      // This name helps in identifying the task and preventing duplicates.
+      // The structure is: timestamp-projectName-environment-variantName-browser
+      const executionId = [
+        Date.now(),
+        validatedBody.projectName,
+        validatedBody.environment,
+        variant.variantName,
+        variant.browser
+      ].join('-');
 
-    const params = {
-      stateMachineArn: process.env.STATE_MACHINE_ARN!,
-      input: JSON.stringify(validatedBody),
-      name: executionId
-    };
+      // Check for currently running executions with a similar name to avoid duplicates.
+      // We list executions on the state machine, filtering by status 'RUNNING'.
+      const listExecutionsParams = {
+        stateMachineArn: process.env.STATE_MACHINE_ARN!,
+        statusFilter: ExecutionStatus.RUNNING
+      };
 
-    console.log('Starting step function execution', params);
+      const runningExecutions = await stepfunctions.listExecutions(listExecutionsParams);
 
-    await stepfunctions.startExecution(params);
+      // A running execution is considered a duplicate if its name starts with the same
+      // project, environment, variant, and browser, ignoring the timestamp.
+      const duplicateExecution = runningExecutions.executions?.find(execution =>
+        execution.name?.startsWith(executionId.substring(executionId.indexOf('-') + 1)) ?? false
+      );
 
+      if (duplicateExecution) {
+        // If a similar task is already running, we refuse to start a new one.
+        // This prevents redundant processing and potential race conditions.
+        const refusalMessage = `A similar task is already running. Execution Name: ${duplicateExecution.name}`;
+        console.log(refusalMessage);
+        // Return a 409 Conflict status to indicate the refusal.
+        res.status(409).json({
+          error: 'Conflict',
+          message: refusalMessage,
+          details: {
+            runningExecutionName: duplicateExecution.name
+          }
+        });
+        return; // Stop processing further variants
+      }
+
+      // Prepare the parameters for starting the Step Function execution.
+      // The input for the state machine is a combination of common properties
+      // and the specific variant details.
+      const params = {
+        stateMachineArn: process.env.STATE_MACHINE_ARN!,
+        input: JSON.stringify({
+          ...validatedBody,
+          variant
+        }),
+        name: executionId
+      };
+
+      console.log('Starting step function execution with params:', params);
+
+      // Start the Step Function execution.
+      await stepfunctions.startExecution(params);
+    }
+
+    // After successfully scheduling all tasks, return a 200 OK response.
     res.status(200).json({
-      status: "task scheduled",
-      executionId: executionId
+      status: "Tasks scheduled successfully"
     });
 
   } catch (error) {

@@ -46,7 +46,7 @@ export class ApiGatewayConstruct extends Construct {
 
     // Grant permission to start execution on the state machine
     const stateMachinePolicy = new iam.PolicyStatement({
-      actions: ['states:StartExecution'],
+      actions: ['states:StartExecution', 'states:ListExecutions'],
       resources: [props.stateMachineArn],
     });
     browseReportsFunction.addToRolePolicy(stateMachinePolicy);
