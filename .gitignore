@@ -10,3 +10,6 @@ node_modules
 cdk.out
 /dist/
 /examples/http-client.private.env.json
+
+# Coverage directory
+coverage/

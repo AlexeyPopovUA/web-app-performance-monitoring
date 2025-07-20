@@ -34,10 +34,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install, type-check, lint
+      - name: Install, type-check, lint, and test
         run: |
           npm ci
           npm run build
+          npm test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

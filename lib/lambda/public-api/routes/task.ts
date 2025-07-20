@@ -110,7 +110,7 @@ export const postTask = async (req: Request, res: Response) => {
       const patternWithoutTimestamp = executionId.substring(executionId.indexOf('-') + 1);
       const duplicateExecution = runningExecutions.executions?.find(execution =>
         execution.name?.includes(patternWithoutTimestamp) ?? false
-      );
+      ) ?? null;
 
       if (duplicateExecution) {
         // If a similar task is already running, reject this variant but continue with others
