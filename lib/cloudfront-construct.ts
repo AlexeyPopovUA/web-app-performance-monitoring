@@ -32,6 +32,17 @@ export class CloudfrontConstruct extends Construct {
       zoneName: configuration.HOSTING.hostedZoneName
     });
 
+    // Create custom cache policy with 5-minute TTL
+    const customCachePolicy = new cloudfront.CachePolicy(this, `${configuration.COMMON.project}-proxy-cache-policy`, {
+      cachePolicyName: `${configuration.COMMON.project}-proxy-cache-policy`,
+      defaultTtl: cdk.Duration.minutes(5),
+      maxTtl: cdk.Duration.minutes(5),
+      minTtl: cdk.Duration.minutes(5),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+      headerBehavior: cloudfront.CacheHeaderBehavior.allowList('Authorization', 'Content-Type'),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+    });
+
     // Create CloudFront distribution
     const distribution = new cloudfront.Distribution(this, `${configuration.COMMON.project}-proxy-cdn`, {
       defaultBehavior: {
@@ -41,7 +52,8 @@ export class CloudfrontConstruct extends Construct {
         }),
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        cachePolicy: customCachePolicy,
+        cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
         originRequestPolicy: new cloudfront.OriginRequestPolicy(this, `${configuration.COMMON.project}-proxy-origin-request-policy`, {
           headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("x-api-key")
         })
