@@ -4,9 +4,9 @@ This project uses AWS CDK to define and deploy infrastructure for monitoring web
 
 ## Key Commands
 
-*   **Install dependencies:** `npm install`
-*   **Build the project:** `npm run build`
-*   **Run tests:** `npm test`
+*   **Install dependencies:** `pnpm install`
+*   **Build the project:** `pnpm run build`
+*   **Run tests:** `pnpm test`
 *   **Deploy a stack:** push changes to git main branch, then the GitHub action works will deploy the stack automatically.
 *   **Lint files:** `npx eslint . --ext .ts`
 
