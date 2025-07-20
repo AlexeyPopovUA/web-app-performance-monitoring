@@ -53,7 +53,10 @@ export class ClusterConstruct extends Construct {
       }),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'CarbonRelayNg',
-        logRetention: logs.RetentionDays.ONE_DAY
+        logGroup: new logs.LogGroup(this, `${configuration.COMMON.project}-carbon-relay-logs`, {
+          retention: logs.RetentionDays.ONE_DAY,
+          removalPolicy: cdk.RemovalPolicy.DESTROY
+        })
       }),
       healthCheck: {
         command: [ "CMD-SHELL", "curl -f http://127.0.0.1:8081 || exit 1" ],

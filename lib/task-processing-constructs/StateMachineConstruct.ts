@@ -34,14 +34,20 @@ export class StateMachineConstruct extends Construct {
 
     const taskGeneratorLambda = new lambda.Function(this, `${configuration.COMMON.project}-task-generator`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: new logs.LogGroup(this, `${configuration.COMMON.project}-task-generator-logs`, {
+        retention: logs.RetentionDays.ONE_DAY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY
+      }),
       handler: 'task-generator-step.handler',
       code: lambda.Code.fromAsset('dist/steps/task-generator-step')
     });
 
     const analysisInitiatorLambda = new lambda.Function(this, `${configuration.COMMON.project}-analysis-initiator`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: new logs.LogGroup(this, `${configuration.COMMON.project}-analysis-initiator-logs`, {
+        retention: logs.RetentionDays.ONE_DAY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY
+      }),
       handler: 'analysis-initiator-step.handler',
       code: lambda.Code.fromAsset('dist/steps/analysis-initiator-step'),
       environment: {
@@ -53,7 +59,10 @@ export class StateMachineConstruct extends Construct {
 
     const cleanupLambda = new lambda.Function(this, `${configuration.COMMON.project}-cleanup`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: new logs.LogGroup(this, `${configuration.COMMON.project}-cleanup-logs`, {
+        retention: logs.RetentionDays.ONE_DAY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY
+      }),
       handler: 'cleanup-step.handler',
       code: lambda.Code.fromAsset('dist/steps/cleanup-step'),
       timeout: core.Duration.minutes(5),
@@ -66,7 +75,10 @@ export class StateMachineConstruct extends Construct {
 
     const reportFinalizerLambda = new lambda.Function(this, `${configuration.COMMON.project}-report-finalizer`, {
       runtime: lambda.Runtime.NODEJS_22_X,
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: new logs.LogGroup(this, `${configuration.COMMON.project}-report-finalizer-logs`, {
+        retention: logs.RetentionDays.ONE_DAY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY
+      }),
       handler: 'report-finalizer-step.handler',
       code: lambda.Code.fromAsset('dist/steps/report-finalizer-step'),
       timeout: core.Duration.minutes(5),
@@ -122,7 +134,10 @@ export class StateMachineConstruct extends Construct {
       command: ['https://example.com', '--summary'],
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: `${configuration.COMMON.project}-sitespeedio-container`,
-        logRetention: logs.RetentionDays.ONE_DAY
+        logGroup: new logs.LogGroup(this, `${configuration.COMMON.project}-sitespeedio-container-logs`, {
+          retention: logs.RetentionDays.ONE_DAY,
+          removalPolicy: cdk.RemovalPolicy.DESTROY
+        })
       }),
       secrets: {
         GRAPHITE_AUTH_1: graphiteAuthSecret

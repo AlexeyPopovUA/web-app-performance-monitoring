@@ -25,7 +25,10 @@ export class ApiGatewayConstruct extends Construct {
     const browseReportsFunction = new lambda.Function(this, `${props.project}-public-gateway-proxy-handler`, {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'lambda.handler',
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: new logs.LogGroup(this, `${props.project}-public-gateway-proxy-handler-logs`, {
+        retention: logs.RetentionDays.ONE_DAY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY
+      }),
       code: lambda.Code.fromAsset('dist/public-api'),
       // important for the big amounts of S3 items
       timeout: cdk.Duration.seconds(30),

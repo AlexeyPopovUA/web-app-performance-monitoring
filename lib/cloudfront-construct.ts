@@ -48,7 +48,8 @@ export class CloudfrontConstruct extends Construct {
       },
       domainNames: [props.domainName],
       certificate,
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      defaultRootObject: 'index.html'
     });
 
     // Add S3 bucket as origin with OAC
