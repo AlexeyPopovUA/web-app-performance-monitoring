@@ -4,6 +4,15 @@ import {ExecutionStatus, SFN} from '@aws-sdk/client-sfn';
 
 const stepfunctions = new SFN();
 
+// Function to sanitize execution ID by replacing invalid characters with "-"
+const sanitizeExecutionId = (str: string): string => {
+  // Replace invalid characters with "-", then collapse multiple consecutive "-" into single "-"
+  // Invalid: whitespace, brackets, wildcards, special chars, control chars
+  return str
+    .replace(/[\s<>{}\[\]?*"#%\\^|~`$&,;:/\u0000-\u001F\u007F-\u009F\uFFFE-\uFFFF\uD800-\uDFFF\u10FFFF]/g, '-')
+    .replace(/-+/g, '-');
+};
+
 // Define the validation schemas
 const TaskVariantSchema = z.object({
   variantName: z.string(),
@@ -67,13 +76,13 @@ export const postTask = async (req: Request, res: Response) => {
       // Generate a unique execution name for each variant.
       // This name helps in identifying the task and preventing duplicates.
       // The structure is: timestamp-projectName-environment-variantName-browser
-      const executionId = [
+      const executionId = sanitizeExecutionId([
         Date.now(),
         validatedBody.projectName,
         validatedBody.environment,
         variant.variantName,
         variant.browser
-      ].join('-');
+      ].join('-').toLowerCase());
 
       // Check for currently running executions with a similar name to avoid duplicates.
       // We list executions on the state machine, filtering by status 'RUNNING'.
@@ -84,10 +93,12 @@ export const postTask = async (req: Request, res: Response) => {
 
       const runningExecutions = await stepfunctions.listExecutions(listExecutionsParams);
 
-      // A running execution is considered a duplicate if its name starts with the same
+      // A running execution is considered a duplicate if its name contains the same
       // project, environment, variant, and browser, ignoring the timestamp.
+      // Extract pattern without timestamp (everything after first dash)
+      const patternWithoutTimestamp = executionId.substring(executionId.indexOf('-') + 1);
       const duplicateExecution = runningExecutions.executions?.find(execution =>
-        execution.name?.startsWith(executionId.substring(executionId.indexOf('-') + 1)) ?? false
+        execution.name?.includes(patternWithoutTimestamp) ?? false
       );
 
       if (duplicateExecution) {
