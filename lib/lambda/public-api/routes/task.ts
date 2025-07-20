@@ -70,8 +70,28 @@ export const postTask = async (req: Request, res: Response) => {
 
     const validatedBody = validationResult.data;
 
-    // validatedBody contains the input validated against the Zod schema.
-    // We iterate over each variant to create and start a Step Function execution.
+    // Get running executions once for all variants
+    const listExecutionsParams = {
+      stateMachineArn: process.env.STATE_MACHINE_ARN!,
+      statusFilter: ExecutionStatus.RUNNING
+    };
+    const runningExecutions = await stepfunctions.listExecutions(listExecutionsParams);
+
+    const acceptedExecutions: Array<{
+      variantName: string;
+      browser: string;
+      executionId: string;
+    }> = [];
+    
+    const rejectedExecutions: Array<{
+      variantName: string;
+      browser: string;
+      executionId: string;
+      reason: string;
+      runningExecutionName?: string;
+    }> = [];
+
+    // Process each variant independently
     for (const variant of validatedBody.variants) {
       // Generate a unique execution name for each variant.
       // This name helps in identifying the task and preventing duplicates.
@@ -84,15 +104,6 @@ export const postTask = async (req: Request, res: Response) => {
         variant.browser
       ].join('-').toLowerCase());
 
-      // Check for currently running executions with a similar name to avoid duplicates.
-      // We list executions on the state machine, filtering by status 'RUNNING'.
-      const listExecutionsParams = {
-        stateMachineArn: process.env.STATE_MACHINE_ARN!,
-        statusFilter: ExecutionStatus.RUNNING
-      };
-
-      const runningExecutions = await stepfunctions.listExecutions(listExecutionsParams);
-
       // A running execution is considered a duplicate if its name contains the same
       // project, environment, variant, and browser, ignoring the timestamp.
       // Extract pattern without timestamp (everything after first dash)
@@ -102,42 +113,66 @@ export const postTask = async (req: Request, res: Response) => {
       );
 
       if (duplicateExecution) {
-        // If a similar task is already running, we refuse to start a new one.
-        // This prevents redundant processing and potential race conditions.
-        const refusalMessage = `A similar task is already running. Execution Name: ${duplicateExecution.name}`;
+        // If a similar task is already running, reject this variant but continue with others
+        const refusalMessage = `A similar task is already running for variant ${variant.variantName} with browser ${variant.browser}`;
         console.log(refusalMessage);
-        // Return a 409 Conflict status to indicate the refusal.
-        res.status(409).json({
-          error: 'Conflict',
-          message: refusalMessage,
-          details: {
-            runningExecutionName: duplicateExecution.name
-          }
+        
+        rejectedExecutions.push({
+          variantName: variant.variantName,
+          browser: variant.browser,
+          executionId,
+          reason: refusalMessage,
+          runningExecutionName: duplicateExecution.name
         });
-        return; // Stop processing further variants
+        
+        continue; // Skip this variant but process others
       }
 
-      // Prepare the parameters for starting the Step Function execution.
-      // The input for the state machine is a combination of common properties
-      // and the specific variant details.
-      const params = {
-        stateMachineArn: process.env.STATE_MACHINE_ARN!,
-        input: JSON.stringify({
-          ...validatedBody,
-          variant
-        }),
-        name: executionId
-      };
+      try {
+        // Prepare the parameters for starting the Step Function execution.
+        // The input for the state machine is a combination of common properties
+        // and the specific variant details.
+        const params = {
+          stateMachineArn: process.env.STATE_MACHINE_ARN!,
+          input: JSON.stringify({
+            ...validatedBody,
+            variant
+          }),
+          name: executionId
+        };
 
-      console.log('Starting step function execution with params:', params);
+        console.log('Starting step function execution with params:', params);
 
-      // Start the Step Function execution.
-      await stepfunctions.startExecution(params);
+        // Start the Step Function execution.
+        await stepfunctions.startExecution(params);
+        
+        acceptedExecutions.push({
+          variantName: variant.variantName,
+          browser: variant.browser,
+          executionId
+        });
+      } catch (error) {
+        console.error(`Failed to start execution for variant ${variant.variantName}:`, error);
+        
+        rejectedExecutions.push({
+          variantName: variant.variantName,
+          browser: variant.browser,
+          executionId,
+          reason: `Failed to start execution: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
+      }
     }
 
-    // After successfully scheduling all tasks, return a 200 OK response.
+    // Return success response with details about accepted and rejected executions
     res.status(200).json({
-      status: "Tasks scheduled successfully"
+      status: "Task processing completed",
+      summary: {
+        totalVariants: validatedBody.variants.length,
+        acceptedCount: acceptedExecutions.length,
+        rejectedCount: rejectedExecutions.length
+      },
+      acceptedExecutions,
+      rejectedExecutions
     });
 
   } catch (error) {
