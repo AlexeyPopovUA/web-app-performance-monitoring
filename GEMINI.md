@@ -12,8 +12,6 @@ This project uses AWS CDK to define and deploy infrastructure for monitoring web
 
 ## Rules & Conventions
 
-*   **File/Directory Exclusions:**
-    *   Do not read or modify files in `node_modules`, `dist`, `.idea`, or `cdk.out`.
 *   **Coding Style:**
     *   Adhere to the rules in `.eslintrc`.
     *   Use `PascalCase` for class and interface names (e.g., `MyMonitoringStack`).
