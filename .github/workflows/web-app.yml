@@ -1,0 +1,317 @@
+name: Web App Deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/web-app/**'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/web-app.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+env:
+  AWS_ACCOUNT: ${{ vars.AWS_ACCOUNT }}
+  AWS_DEPLOYMENT_REGION: ${{ vars.AWS_DEPLOYMENT_REGION }}
+  NODE_VERSION: '22'
+  PNPM_VERSION: '8'
+
+jobs:
+  build:
+    name: Build Next.js Application
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: |
+          cd packages/web-app
+          pnpm test --passWithNoTests
+
+      - name: Build Next.js application
+        run: |
+          cd packages/web-app
+          pnpm build
+        env:
+          API_BASE_URL: https://perf-mon.examples.oleksiipopov.com
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Prepare deployment package
+        run: |
+          cd packages/web-app
+          
+          # Create deployment directory
+          mkdir -p deployment
+          
+          # Copy standalone build
+          cp -r .next/standalone/* deployment/
+          
+          # Copy static files
+          mkdir -p deployment/.next
+          cp -r .next/static deployment/.next/
+          
+          # Copy public files
+          cp -r public deployment/ 2>/dev/null || true
+          
+          # Copy Lambda adapter
+          cp lambda-adapter.js deployment/
+          
+          # Create package.json for Lambda
+          cat > deployment/package.json << EOF
+          {
+            "name": "nextjs-lambda",
+            "version": "1.0.0",
+            "dependencies": {
+              "serverless-http": "^3.2.0"
+            }
+          }
+          EOF
+          
+          # Install production dependencies
+          cd deployment && npm install --production
+
+      - name: Create build artifact
+        id: artifact
+        run: |
+          cd packages/web-app/deployment
+          zip -r ../nextjs-lambda.zip . -x "*.git*"
+          echo "name=nextjs-lambda-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: packages/web-app/nextjs-lambda.zip
+          retention-days: 7
+
+      - name: Upload static assets artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-assets-${{ github.sha }}
+          path: |
+            packages/web-app/.next/static
+            packages/web-app/public
+          retention-days: 7
+
+  deploy:
+    name: Deploy to AWS
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    permissions:
+      id-token: write
+      contents: read
+      
+    steps:
+      - name: Download Lambda artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact-name }}
+          path: ./deploy
+
+      - name: Download static assets
+        uses: actions/download-artifact@v4
+        with:
+          name: static-assets-${{ github.sha }}
+          path: ./static
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_DEPLOYMENT_REGION }}
+          role-to-assume: ${{ vars.AWS_AUTH_ROLE }}
+
+      - name: Get deployment parameters from SSM
+        id: params
+        run: |
+          LAMBDA_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/lambda-function-name" --query 'Parameter.Value' --output text)
+          BUCKET_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/static-bucket-name" --query 'Parameter.Value' --output text)
+          DISTRIBUTION_ID=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/distribution-id" --query 'Parameter.Value' --output text)
+          
+          echo "lambda-name=$LAMBDA_NAME" >> $GITHUB_OUTPUT
+          echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "distribution-id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+
+      - name: Deploy Lambda function
+        run: |
+          # Update Lambda function code
+          aws lambda update-function-code \
+            --function-name ${{ steps.params.outputs.lambda-name }} \
+            --zip-file fileb://deploy/nextjs-lambda.zip \
+            --publish
+          
+          # Wait for function to be updated
+          aws lambda wait function-updated \
+            --function-name ${{ steps.params.outputs.lambda-name }}
+          
+          # Get the published version
+          VERSION=$(aws lambda get-function --function-name ${{ steps.params.outputs.lambda-name }} --query 'Configuration.Version' --output text)
+          echo "Deployed Lambda version: $VERSION"
+          
+          # Tag the version
+          aws lambda tag-resource \
+            --resource arn:aws:lambda:${{ env.AWS_DEPLOYMENT_REGION }}:${{ env.AWS_ACCOUNT }}:function:${{ steps.params.outputs.lambda-name }}:$VERSION \
+            --tags \
+              Environment=${{ github.event.inputs.environment || 'production' }} \
+              GitCommit=${{ github.sha }} \
+              DeployedAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+      - name: Upload static assets to S3
+        run: |
+          # Upload Next.js static files
+          if [ -d "static/.next/static" ]; then
+            aws s3 sync static/.next/static/ s3://${{ steps.params.outputs.bucket-name }}/_next/static/ \
+              --delete \
+              --cache-control "public, max-age=31536000, immutable" \
+              --metadata-directive REPLACE
+          fi
+          
+          # Upload public assets
+          if [ -d "static/public" ]; then
+            # Upload files with appropriate cache headers
+            find static/public -type f -name "*.ico" -o -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.svg" | while read file; do
+              relative_path=${file#static/public/}
+              aws s3 cp "$file" "s3://${{ steps.params.outputs.bucket-name }}/$relative_path" \
+                --cache-control "public, max-age=86400" \
+                --metadata-directive REPLACE
+            done
+            
+            # Upload other files
+            find static/public -type f ! -name "*.ico" ! -name "*.png" ! -name "*.jpg" ! -name "*.jpeg" ! -name "*.svg" | while read file; do
+              relative_path=${file#static/public/}
+              aws s3 cp "$file" "s3://${{ steps.params.outputs.bucket-name }}/$relative_path" \
+                --cache-control "public, max-age=3600" \
+                --metadata-directive REPLACE
+            done
+          fi
+
+      - name: Invalidate CloudFront cache
+        run: |
+          # Create invalidation for all paths
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.params.outputs.distribution-id }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          
+          echo "Created CloudFront invalidation: $INVALIDATION_ID"
+          
+          # Optionally wait for invalidation to complete (this can take a while)
+          # aws cloudfront wait invalidation-completed \
+          #   --distribution-id ${{ steps.params.outputs.distribution-id }} \
+          #   --id $INVALIDATION_ID
+
+      - name: Verify deployment
+        run: |
+          # Get Lambda function URL
+          FUNCTION_URL=$(aws lambda get-function-url-config \
+            --function-name ${{ steps.params.outputs.lambda-name }} \
+            --query 'FunctionUrl' \
+            --output text)
+          
+          echo "Lambda Function URL: $FUNCTION_URL"
+          
+          # Test Lambda directly
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTION_URL")
+          if [ "$response" -eq 200 ]; then
+            echo "✅ Lambda function is responding correctly"
+          else
+            echo "❌ Lambda function returned HTTP $response"
+            exit 1
+          fi
+          
+          # Test CloudFront distribution
+          DISTRIBUTION_URL="https://${{ vars.DOMAIN_NAME || 'perf-mon.examples.oleksiipopov.com' }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$DISTRIBUTION_URL")
+          if [ "$response" -eq 200 ]; then
+            echo "✅ CloudFront distribution is serving correctly"
+          else
+            echo "⚠️ CloudFront distribution returned HTTP $response (may need time to propagate)"
+          fi
+
+      - name: Create deployment summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## Deployment Summary
+          
+          - **Environment**: ${{ github.event.inputs.environment || 'production' }}
+          - **Commit**: ${{ github.sha }}
+          - **Lambda Function**: ${{ steps.params.outputs.lambda-name }}
+          - **S3 Bucket**: ${{ steps.params.outputs.bucket-name }}
+          - **CloudFront Distribution**: ${{ steps.params.outputs.distribution-id }}
+          - **URL**: https://${{ vars.DOMAIN_NAME || 'perf-mon.examples.oleksiipopov.com' }}
+          
+          ### Next Steps
+          
+          1. Monitor Lambda function logs in CloudWatch
+          2. Check CloudFront distribution metrics
+          3. Verify application functionality
+          EOF
+
+  rollback:
+    name: Rollback (Manual Trigger)
+    if: false  # This job must be manually enabled if needed
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_DEPLOYMENT_REGION }}
+          role-to-assume: ${{ vars.AWS_AUTH_ROLE }}
+
+      - name: Rollback to previous version
+        run: |
+          # Get Lambda function name
+          LAMBDA_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/lambda-function-name" --query 'Parameter.Value' --output text)
+          
+          # List versions and find the previous one
+          CURRENT_VERSION=$(aws lambda get-function --function-name $LAMBDA_NAME --query 'Configuration.Version' --output text)
+          PREVIOUS_VERSION=$((CURRENT_VERSION - 1))
+          
+          if [ $PREVIOUS_VERSION -gt 0 ]; then
+            # Create alias pointing to previous version
+            aws lambda update-alias \
+              --function-name $LAMBDA_NAME \
+              --name production \
+              --function-version $PREVIOUS_VERSION
+            
+            echo "Rolled back to version $PREVIOUS_VERSION"
+          else
+            echo "No previous version available for rollback"
+            exit 1
+          fi

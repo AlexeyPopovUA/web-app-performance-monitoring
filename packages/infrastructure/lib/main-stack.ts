@@ -5,6 +5,7 @@ import {StateMachineConstruct} from "./task-processing-constructs/StateMachineCo
 import {ClusterConstruct} from "./task-processing-constructs/ClusterConstruct";
 import {ApiGatewayConstruct} from "./api-gateway-construct";
 import {CloudfrontConstruct} from "./cloudfront-construct";
+import {NextJsLambdaConstruct} from "./nextjs-lambda-construct";
 import {S3BucketsConstruct} from "./s3-buckets-construct";
 import {VpcConstruct} from "./vpc-construct";
 
@@ -68,6 +69,14 @@ export class MainStack extends cdk.NestedStack {
       networking: {
         vpc
       }
-    })
+    });
+
+    // Next.js web application hosting
+    new NextJsLambdaConstruct(this, `${configuration.COMMON.project}-NextJsLambdaConstruct`, {
+      env,
+      domainName: configuration.HOSTING.staticDomainName, // Using static domain for the web app
+      certificateArn: props.certificateArn,
+      apiGatewayUrl: `https://${configuration.HOSTING.domainName}` // API domain
+    });
   }
 }

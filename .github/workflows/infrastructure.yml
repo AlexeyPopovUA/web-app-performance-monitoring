@@ -1,11 +1,13 @@
-name: Legacy Cloud pipeline (deprecated)
+name: Infrastructure Deployment
 
 on:
   push:
     branches:
       - main
     paths:
-      - '.github/workflows/cloud.yml'  # Only trigger for this specific file
+      - 'packages/infrastructure/**'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
 
 env:
   DEFAULT_BRANCH: main
@@ -14,7 +16,7 @@ env:
   HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
 
 jobs:
-  build_and_deploy:
+  deploy_infrastructure:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -22,11 +24,7 @@ jobs:
 
     steps:
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v4
-
-      - name: Prepare variables
-        run: echo SAFE_SOURCE_NAME=$(echo "${{ github.ref_name }}" | sed -r 's/[/.@_]+/-/g') >> $GITHUB_ENV
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -39,30 +37,28 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
-      - name: Install, type-check, lint, and test
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and test infrastructure
         run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
-          pnpm test
+          pnpm --filter @web-perf-mon/infrastructure build
+          pnpm --filter @web-perf-mon/infrastructure test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: eu-west-1
+          aws-region: us-east-1
           role-to-assume: ${{ vars.AWS_AUTH_ROLE }}
 
       - name: Deploy infrastructure
-        if: env.SAFE_SOURCE_NAME == env.DEFAULT_BRANCH
-        run: pnpm exec cdk deploy --all --require-approval never
+        run: pnpm --filter @web-perf-mon/infrastructure cdk deploy --all --require-approval never
         env:
           GRAPHITE_AUTH: ${{ secrets.GRAPHITE_AUTH }}
           IDLE_MODE: ${{ vars.IDLE_MODE }}
           API_KEY: ${{ secrets.API_KEY }}
 
-      - name: Diff infrastructure
-        if: env.SAFE_SOURCE_NAME != env.DEFAULT_BRANCH
-        run: pnpm exec cdk diff
-        env:
-          GRAPHITE_AUTH: ${{ secrets.GRAPHITE_AUTH }}
-          IDLE_MODE: ${{ vars.IDLE_MODE }}
-          API_KEY: ${{ secrets.API_KEY }}
+      - name: Save CDK outputs
+        run: |
+          pnpm --filter @web-perf-mon/infrastructure cdk list --json > cdk-outputs.json
+          echo "Infrastructure deployed successfully"

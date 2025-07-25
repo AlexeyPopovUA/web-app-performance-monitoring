@@ -9,7 +9,8 @@ node_modules
 .cdk.staging
 cdk.out
 /dist/
-/examples/http-client.private.env.json
+/packages/infrastructure/examples/*.private.env.json
 
 # Coverage directory
 coverage/
+/packages/web-app/.next/
