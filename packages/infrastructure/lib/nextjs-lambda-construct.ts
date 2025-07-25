@@ -129,13 +129,11 @@ export class NextJsLambdaConstruct extends Construct {
         'Accept-Language',
         'Authorization',
         'CloudFront-Forwarded-Proto',
+        'CloudFront-Viewer-Country',
         'Host',
         'Origin',
         'Referer',
-        'User-Agent',
-        'X-Forwarded-For',
-        'X-Forwarded-Host',
-        'X-Forwarded-Proto'
+        'User-Agent'
       ),
       cookieBehavior: cloudfront.CacheCookieBehavior.all(),
     });
