@@ -51,7 +51,7 @@ jobs:
 
       - name: Deploy infrastructure
         if: env.SAFE_SOURCE_NAME == env.DEFAULT_BRANCH
-        run: pnpm exec cdk deploy --all --require-approval never
+        run: pnpm --filter @web-perf-mon/infrastructure cdk deploy --all --require-approval never
         env:
           GRAPHITE_AUTH: ${{ secrets.GRAPHITE_AUTH }}
           IDLE_MODE: ${{ vars.IDLE_MODE }}
@@ -59,7 +59,7 @@ jobs:
 
       - name: Diff infrastructure
         if: env.SAFE_SOURCE_NAME != env.DEFAULT_BRANCH
-        run: pnpm exec cdk diff
+        run: pnpm --filter @web-perf-mon/infrastructure cdk diff
         env:
           GRAPHITE_AUTH: ${{ secrets.GRAPHITE_AUTH }}
           IDLE_MODE: ${{ vars.IDLE_MODE }}
