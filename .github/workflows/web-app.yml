@@ -25,7 +25,6 @@ env:
   AWS_ACCOUNT: ${{ vars.AWS_ACCOUNT }}
   AWS_DEPLOYMENT_REGION: ${{ vars.AWS_DEPLOYMENT_REGION }}
   NODE_VERSION: '22'
-  PNPM_VERSION: '10.13.1'
 
 jobs:
   build:
@@ -40,8 +39,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
