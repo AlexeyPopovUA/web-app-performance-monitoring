@@ -7,8 +7,8 @@ const nextConfig = {
   
   // Configure for server-side runtime
   experimental: {
-    // Reduce bundle size
-    optimizeCss: true,
+    // Disable CSS optimization due to critters compatibility issues
+    // optimizeCss: true,
   },
   
   // Image optimization
