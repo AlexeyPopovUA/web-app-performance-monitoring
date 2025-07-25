@@ -88,9 +88,9 @@ export class NextJsLambdaConstruct extends Construct {
       authType: lambda.FunctionUrlAuthType.NONE,
       cors: {
         allowCredentials: false,
-        allowMethods: [lambda.HttpMethod.ALL],
-        allowOrigins: ['*'],
-        allowHeaders: ['*'],
+        allowedMethods: [lambda.HttpMethod.ALL],
+        allowedOrigins: ['*'],
+        allowedHeaders: ['*'],
       },
     });
 
