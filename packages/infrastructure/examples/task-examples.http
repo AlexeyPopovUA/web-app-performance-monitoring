@@ -2,7 +2,7 @@
 
 # Valid simple single request
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://api.perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {
@@ -27,7 +27,7 @@ Content-Type: application/json
 
 # Personal Website - Oleksii Popov
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://api.perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {
@@ -91,7 +91,7 @@ Content-Type: application/json
 
 # Wife's blog - Zapiski Mami
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://api.perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {
@@ -123,7 +123,7 @@ Content-Type: application/json
 
 # Route Planner - TomTom
 
-POST https://task.perf-mon.examples.oleksiipopov.com/request
+POST https://api.perf-mon.examples.oleksiipopov.com/api/task
 Content-Type: application/json
 
 {

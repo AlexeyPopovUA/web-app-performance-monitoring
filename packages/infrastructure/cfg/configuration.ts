@@ -10,8 +10,8 @@ export default {
   HOSTING: {
     hostedZoneID: process.env?.HOSTED_ZONE_ID || "",
     hostedZoneName: "oleksiipopov.com",
-    staticDomainName: "oleksiipopov.com",
-    domainName: "perf-mon.examples.oleksiipopov.com",
+    staticDomainName: "app.perf-mon.examples.oleksiipopov.com",
+    domainName: "api.perf-mon.examples.oleksiipopov.com",
   },
   SECURITY: {
     apiKey: process.env?.API_KEY || `perf-mon-key-${Date.now()}` // Generate unique default key
@@ -19,7 +19,7 @@ export default {
   REPORTING: {
     bucketName: "web-perf-mon-reports",
     temporaryBucketName: "web-perf-mon-reports-temp",
-    staticReportBaseURL: "https://perf-mon.examples.oleksiipopov.com/"
+    staticReportBaseURL: "https://api.perf-mon.examples.oleksiipopov.com/"
   },
   ANALYSIS: {
     clusterName: 'web-perf-mon-cluster',

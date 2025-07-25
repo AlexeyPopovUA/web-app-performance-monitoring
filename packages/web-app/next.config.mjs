@@ -13,13 +13,13 @@ const nextConfig = {
   
   // Image optimization
   images: {
-    domains: ['perf-mon.examples.oleksiipopov.com'],
+    domains: ['api.perf-mon.examples.oleksiipopov.com'],
     unoptimized: true, // Lambda doesn't support Next.js image optimization
   },
   
   // Environment variables
   env: {
-    API_BASE_URL: process.env.API_BASE_URL || 'https://perf-mon.examples.oleksiipopov.com',
+    API_BASE_URL: process.env.API_BASE_URL || 'https://api.perf-mon.examples.oleksiipopov.com',
   },
   
   // Headers for security

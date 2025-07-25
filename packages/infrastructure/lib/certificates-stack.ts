@@ -16,7 +16,11 @@ export class CertificatesStack extends cdk.NestedStack {
     });
 
     const certificate = new cert.Certificate(this, `${configuration.COMMON.project}-Certificate`, {
-      domainName: configuration.HOSTING.domainName,
+      domainName: `*.perf-mon.examples.${configuration.HOSTING.hostedZoneName}`, // Wildcard for all perf-mon subdomains
+      subjectAlternativeNames: [
+        configuration.HOSTING.domainName,
+        configuration.HOSTING.staticDomainName
+      ],
       validation: cert.CertificateValidation.fromDns(hostedZone)
     });
 

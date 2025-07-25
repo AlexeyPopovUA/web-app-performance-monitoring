@@ -59,7 +59,7 @@ jobs:
           cd packages/web-app
           NEXT_TELEMETRY_DISABLED=1 pnpm build
         env:
-          API_BASE_URL: https://perf-mon.examples.oleksiipopov.com
+          API_BASE_URL: https://api.perf-mon.examples.oleksiipopov.com
           NEXT_TELEMETRY_DISABLED: 1
 
       - name: Prepare deployment package
@@ -247,7 +247,7 @@ jobs:
           fi
           
           # Test CloudFront distribution
-          DISTRIBUTION_URL="https://${{ vars.DOMAIN_NAME || 'perf-mon.examples.oleksiipopov.com' }}"
+          DISTRIBUTION_URL="https://${{ vars.DOMAIN_NAME || 'app.perf-mon.examples.oleksiipopov.com' }}"
           response=$(curl -s -o /dev/null -w "%{http_code}" "$DISTRIBUTION_URL")
           if [ "$response" -eq 200 ]; then
             echo "✅ CloudFront distribution is serving correctly"
@@ -266,7 +266,7 @@ jobs:
           - **Lambda Function**: ${{ steps.params.outputs.lambda-name }}
           - **S3 Bucket**: ${{ steps.params.outputs.bucket-name }}
           - **CloudFront Distribution**: ${{ steps.params.outputs.distribution-id }}
-          - **URL**: https://${{ vars.DOMAIN_NAME || 'perf-mon.examples.oleksiipopov.com' }}
+          - **URL**: https://${{ vars.DOMAIN_NAME || 'app.perf-mon.examples.oleksiipopov.com' }}
           
           ### Next Steps
           
