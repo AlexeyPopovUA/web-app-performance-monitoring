@@ -2,6 +2,7 @@
   "name": "web-app-performance-monitoring",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.13.1",
   "workspaces": [
     "packages/*"
   ],
