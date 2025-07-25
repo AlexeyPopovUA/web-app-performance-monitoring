@@ -2,6 +2,8 @@
 
 *.js
 !jest.config.js
+!packages/web-app/lambda-adapter.js
+!packages/web-app/next.config.js
 *.d.ts
 node_modules
 
