@@ -81,15 +81,16 @@ export class NextJsLambdaConstruct extends Construct {
         NODE_ENV: 'production',
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       },
-      // Enable Lambda Function URLs for direct access
-      functionUrlOptions: {
-        authType: lambda.FunctionUrlAuthType.NONE,
-        cors: {
-          allowCredentials: false,
-          allowMethods: [lambda.HttpMethod.ALL],
-          allowOrigins: ['*'],
-          allowHeaders: ['*'],
-        },
+    });
+
+    // Add Lambda Function URL
+    const functionUrl = this.lambdaFunction.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowCredentials: false,
+        allowMethods: [lambda.HttpMethod.ALL],
+        allowOrigins: ['*'],
+        allowHeaders: ['*'],
       },
     });
 
@@ -111,12 +112,9 @@ export class NextJsLambdaConstruct extends Construct {
     });
 
     // Create Origin Access Control for S3 bucket
-    const originAccessControl = new cloudfront.OriginAccessControl(this, `${configuration.COMMON.project}-nextjs-oac`, {
+    const originAccessControl = new cloudfront.S3OriginAccessControl(this, `${configuration.COMMON.project}-nextjs-oac`, {
       originAccessControlName: `${configuration.COMMON.project}-nextjs-oac`,
       description: 'Origin Access Control for Next.js static assets',
-      originAccessControlOriginType: cloudfront.OriginAccessControlOriginType.S3,
-      signingBehavior: cloudfront.OriginAccessControlSigningBehavior.ALWAYS,
-      signingProtocol: cloudfront.OriginAccessControlSigningProtocol.SIGV4,
     });
 
     // Create cache policy for Next.js pages with ISR
@@ -156,7 +154,7 @@ export class NextJsLambdaConstruct extends Construct {
     // Create CloudFront distribution
     this.distribution = new cloudfront.Distribution(this, `${configuration.COMMON.project}-nextjs-distribution`, {
       defaultBehavior: {
-        origin: new origins.FunctionUrlOrigin(this.lambdaFunction.functionUrl!),
+        origin: new origins.FunctionUrlOrigin(functionUrl),
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: nextjsCachePolicy,
@@ -213,7 +211,7 @@ export class NextJsLambdaConstruct extends Construct {
     });
 
     new cdk.CfnOutput(this, 'LambdaFunctionUrl', {
-      value: this.lambdaFunction.functionUrl?.url || 'Not available',
+      value: functionUrl.url,
       description: 'Direct Lambda Function URL (for testing)',
     });
 
@@ -260,7 +258,7 @@ export class NextJsLambdaConstruct extends Construct {
       { mutable: false }
     );
 
-    this.lambdaFunction.grantInvokeFunction(githubActionsRole);
+    this.lambdaFunction.grantInvoke(githubActionsRole);
     this.staticAssetsBucket.grantReadWrite(githubActionsRole);
   }
 }
