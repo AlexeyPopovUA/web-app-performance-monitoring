@@ -185,34 +185,17 @@ jobs:
         run: |
           echo "image-uri=${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}" >> $GITHUB_OUTPUT
 
-      - name: Deploy Lambda function
+      - name: Deploy infrastructure with new container image
         run: |
-          IMAGE_URI="${{ steps.image-output.outputs.image-uri }}"
+          echo "🚀 Deploying infrastructure stack with new container image"
           
-          echo "🚀 Deploying Lambda function with image: $IMAGE_URI"
+          # Install pnpm for infrastructure deployment
+          cd packages/infrastructure
           
-          # Update Lambda function code with new container image
-          aws lambda update-function-code \
-            --function-name ${{ steps.params.outputs.lambda-name }} \
-            --image-uri "$IMAGE_URI" \
-            --publish
+          # Deploy the infrastructure stack - it will pick up the :latest image from ECR
+          pnpm run cdk deploy --all --require-approval never
           
-          # Wait for function to be updated
-          aws lambda wait function-updated \
-            --function-name ${{ steps.params.outputs.lambda-name }}
-          
-          # Get the published version
-          VERSION=$(aws lambda get-function --function-name ${{ steps.params.outputs.lambda-name }} --query 'Configuration.Version' --output text)
-          echo "✅ Deployed Lambda version: $VERSION"
-          
-          # Tag the version
-          aws lambda tag-resource \
-            --resource arn:aws:lambda:${{ env.AWS_DEPLOYMENT_REGION }}:${{ env.AWS_ACCOUNT }}:function:${{ steps.params.outputs.lambda-name }}:$VERSION \
-            --tags \
-              Environment=${{ github.event.inputs.environment || 'production' }} \
-              GitCommit=${{ github.sha }} \
-              DeployedAt=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
-              ImageUri="$IMAGE_URI"
+          echo "✅ Infrastructure deployed with new container image"
 
       - name: Upload static assets to S3
         run: |

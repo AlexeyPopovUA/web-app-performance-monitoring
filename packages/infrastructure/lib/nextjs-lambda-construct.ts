@@ -54,45 +54,24 @@ export class NextJsLambdaConstruct extends Construct {
     const standalonePath = path.join(webAppPath, '.next/standalone');
     const hasStandaloneBuild = fs.existsSync(standalonePath);
 
-    // Create Lambda function using container image
-    this.lambdaFunction = hasStandaloneBuild 
-      ? new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
-          functionName: `${configuration.COMMON.project}-nextjs-lambda`,
-          code: lambda.Code.fromAssetImage(webAppPath, {
-            cmd: ['lambda-adapter.handler'],
-            file: 'Dockerfile',
-          }),
-          handler: lambda.Handler.FROM_IMAGE, // Required for container-based functions
-          runtime: lambda.Runtime.FROM_IMAGE,  // Required for container-based functions
-          timeout: cdk.Duration.seconds(30),
-          memorySize: 1024,
-          environment: {
-            API_BASE_URL: props.apiGatewayUrl,
-            NODE_ENV: 'production',
-            AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
-          },
-        })
-      : new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
-          functionName: `${configuration.COMMON.project}-nextjs-lambda`,
-          runtime: lambda.Runtime.NODEJS_22_X,
-          handler: 'index.handler',
-          code: lambda.Code.fromInline(`
-            exports.handler = async (event) => {
-              return {
-                statusCode: 200,
-                headers: { 'Content-Type': 'text/html' },
-                body: '<h1>Next.js app not yet deployed. Run deployment workflow to build and push container image.</h1>'
-              };
-            };
-          `),
-          timeout: cdk.Duration.seconds(30),
-          memorySize: 1024,
-          environment: {
-            API_BASE_URL: props.apiGatewayUrl,
-            NODE_ENV: 'production',
-            AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
-          },
-        });
+    // Create Lambda function using container image from ECR
+    this.lambdaFunction = new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
+      functionName: `${configuration.COMMON.project}-nextjs-lambda`,
+      code: lambda.Code.fromEcrImage(this.ecrRepository, {
+        tagOrDigest: 'latest',
+        cmd: ['lambda-adapter.handler'],
+      }),
+      handler: lambda.Handler.FROM_IMAGE, // Required for container-based functions
+      runtime: lambda.Runtime.FROM_IMAGE,  // Required for container-based functions
+      packageType: lambda.PackageType.IMAGE, // Explicitly set package type to IMAGE
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 1024,
+      environment: {
+        API_BASE_URL: props.apiGatewayUrl,
+        NODE_ENV: 'production',
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+      },
+    });
 
     // Add Lambda Function URL
     const functionUrl = this.lambdaFunction.addFunctionUrl({
