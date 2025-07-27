@@ -13,8 +13,8 @@ COPY .next/static ./.next/static/
 # Copy Lambda adapter
 COPY lambda-adapter.js ./
 
-# Copy public files (now guaranteed to exist)
-COPY public/ ./public/
+# Create empty public directory (Next.js expects it to exist)
+RUN mkdir -p ./public
 
 # Install serverless-http separately to avoid dependency conflicts
 RUN cd /tmp && \
