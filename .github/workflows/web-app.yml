@@ -126,6 +126,21 @@ jobs:
       contents: read
       
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Download Docker build context
         uses: actions/download-artifact@v4
         with:
@@ -189,10 +204,8 @@ jobs:
         run: |
           echo "🚀 Deploying infrastructure stack with new container image"
           
-          # Install pnpm for infrastructure deployment
-          cd packages/infrastructure
-          
           # Deploy the infrastructure stack - it will pick up the :latest image from ECR
+          cd packages/infrastructure
           pnpm run cdk deploy --all --require-approval never
           
           echo "✅ Infrastructure deployed with new container image"
