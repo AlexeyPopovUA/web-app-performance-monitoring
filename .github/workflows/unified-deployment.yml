@@ -328,12 +328,37 @@ jobs:
         run: |
           echo "🚀 Updating Lambda function with new container image"
           
-          # Update the Lambda function to use the new image
-          aws lambda update-function-code \
-            --function-name ${{ steps.params.outputs.lambda-name }} \
-            --image-uri ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+          # Check current package type
+          CURRENT_PACKAGE_TYPE=$(aws lambda get-function --function-name ${{ steps.params.outputs.lambda-name }} --query 'Configuration.PackageType' --output text)
+          echo "Current package type: $CURRENT_PACKAGE_TYPE"
           
-          # Wait for the update to complete
+          if [ "$CURRENT_PACKAGE_TYPE" = "Zip" ]; then
+            echo "Converting Lambda from Zip to Image package type..."
+            
+            # Update function configuration to use container image
+            aws lambda update-function-configuration \
+              --function-name ${{ steps.params.outputs.lambda-name }} \
+              --package-type Image \
+              --timeout 30 \
+              --memory-size 1024
+            
+            # Wait for configuration update to complete
+            echo "⏳ Waiting for configuration update to complete..."
+            aws lambda wait function-updated \
+              --function-name ${{ steps.params.outputs.lambda-name }}
+            
+            # Now update the code with container image
+            aws lambda update-function-code \
+              --function-name ${{ steps.params.outputs.lambda-name }} \
+              --image-uri ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+          else
+            # Direct code update for Image package type
+            aws lambda update-function-code \
+              --function-name ${{ steps.params.outputs.lambda-name }} \
+              --image-uri ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+          fi
+          
+          # Wait for the final update to complete
           echo "⏳ Waiting for Lambda function update to complete..."
           aws lambda wait function-updated \
             --function-name ${{ steps.params.outputs.lambda-name }}

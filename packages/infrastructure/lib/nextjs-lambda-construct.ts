@@ -54,15 +54,20 @@ export class NextJsLambdaConstruct extends Construct {
     const standalonePath = path.join(webAppPath, '.next/standalone');
     const hasStandaloneBuild = fs.existsSync(standalonePath);
 
-    // Create Lambda function using container image from ECR
+    // Create Lambda function - initially with a placeholder, will be updated with container image later
     this.lambdaFunction = new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
       functionName: `${configuration.COMMON.project}-nextjs-lambda-v2`,
-      code: lambda.Code.fromEcrImage(this.ecrRepository, {
-        tagOrDigest: 'latest',
-        cmd: ['lambda-adapter.handler'],
-      }),
-      handler: lambda.Handler.FROM_IMAGE, // Required for container-based functions
-      runtime: lambda.Runtime.FROM_IMAGE,  // Required for container-based functions
+      code: lambda.Code.fromInline(`
+        exports.handler = async (event) => {
+          return {
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: 'Lambda function awaiting container deployment' }),
+          };
+        };
+      `),
+      handler: 'index.handler',
+      runtime: lambda.Runtime.NODEJS_22_X,
       timeout: cdk.Duration.seconds(30),
       memorySize: 1024,
       environment: {
@@ -71,6 +76,9 @@ export class NextJsLambdaConstruct extends Construct {
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       },
     });
+
+    // Grant Lambda permission to pull images from ECR (needed for later container updates)
+    this.ecrRepository.grantPull(this.lambdaFunction);
 
     // Add Lambda Function URL
     const functionUrl = this.lambdaFunction.addFunctionUrl({
