@@ -328,14 +328,14 @@ jobs:
         run: |
           echo "🚀 Updating infrastructure to use container image"
           
-          # First, update the CDK infrastructure to switch to container image
-          cd packages/infrastructure
-          
           # Create a temporary file to indicate we want to use container image
-          echo "CONTAINER_DEPLOYMENT=true" > .container-ready
+          echo "CONTAINER_DEPLOYMENT=true" > packages/infrastructure/.container-ready
+          
+          # Build infrastructure (this creates the dist directory with Lambda assets)
+          pnpm --filter @web-perf-mon/infrastructure build
           
           # Deploy the updated infrastructure
-          pnpm run cdk deploy --all --require-approval never
+          pnpm --filter @web-perf-mon/infrastructure cdk deploy --all --require-approval never
           
           echo "✅ Infrastructure updated to use container image"
 
