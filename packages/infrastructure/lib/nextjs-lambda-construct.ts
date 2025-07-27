@@ -55,7 +55,8 @@ export class NextJsLambdaConstruct extends Construct {
 
     // Create Lambda function - use container image if ready, otherwise placeholder
     const lambdaProps: any = {
-      functionName: `${configuration.COMMON.project}-nextjs-lambda-v2`,
+      // Remove custom name to allow CloudFormation to manage replacements
+      // functionName: `${configuration.COMMON.project}-nextjs-lambda-v3`,
       timeout: cdk.Duration.seconds(30),
       memorySize: 1024,
       environment: {
