@@ -4,12 +4,11 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -26,6 +25,7 @@ export class NextJsLambdaConstruct extends Construct {
   public readonly distribution: cloudfront.Distribution;
   public readonly lambdaFunction: lambda.Function;
   public readonly staticAssetsBucket: s3.Bucket;
+  public readonly ecrRepository: ecr.Repository;
 
   constructor(scope: Construct, id: string, props: NextJsLambdaConstructProps) {
     super(scope, id);
@@ -40,48 +40,59 @@ export class NextJsLambdaConstruct extends Construct {
       zoneName: configuration.HOSTING.hostedZoneName
     });
 
+    // Create ECR repository for container images
+    this.ecrRepository = new ecr.Repository(this, `${configuration.COMMON.project}-nextjs-ecr`, {
+      repositoryName: `${configuration.COMMON.project}-nextjs-lambda`,
+      imageScanOnPush: true,
+      encryption: ecr.RepositoryEncryption.KMS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      emptyOnDelete: true,
+    });
+
     // Check if Next.js build exists (for initial deployment)
     const webAppPath = path.join(__dirname, '../../web-app');
     const standalonePath = path.join(webAppPath, '.next/standalone');
     const hasStandaloneBuild = fs.existsSync(standalonePath);
 
-    // Create Lambda function with placeholder code if no build exists
-    this.lambdaFunction = new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
-      functionName: `${configuration.COMMON.project}-nextjs-lambda`,
-      runtime: lambda.Runtime.NODEJS_22_X,
-      handler: 'lambda-adapter.handler',
-      code: hasStandaloneBuild 
-        ? lambda.Code.fromAsset(webAppPath, {
-            bundling: {
-              image: lambda.Runtime.NODEJS_22_X.bundlingImage,
-              command: [
-                'bash', '-c', [
-                  'cp -r .next/standalone/* /asset-output/',
-                  'cp -r .next/static /asset-output/.next/',
-                  'cp -r public /asset-output/ 2>/dev/null || true',
-                  'cp lambda-adapter.js /asset-output/',
-                  'cd /asset-output && npm install serverless-http'
-                ].join(' && ')
-              ],
-            },
-          })
-        : lambda.Code.fromInline(`
+    // Create Lambda function using container image
+    this.lambdaFunction = hasStandaloneBuild 
+      ? new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
+          functionName: `${configuration.COMMON.project}-nextjs-lambda`,
+          code: lambda.Code.fromAssetImage(webAppPath, {
+            cmd: ['lambda-adapter.handler'],
+            file: 'Dockerfile',
+          }),
+          handler: lambda.Handler.FROM_IMAGE, // Required for container-based functions
+          runtime: lambda.Runtime.FROM_IMAGE,  // Required for container-based functions
+          timeout: cdk.Duration.seconds(30),
+          memorySize: 1024,
+          environment: {
+            API_BASE_URL: props.apiGatewayUrl,
+            NODE_ENV: 'production',
+            AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+          },
+        })
+      : new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
+          functionName: `${configuration.COMMON.project}-nextjs-lambda`,
+          runtime: lambda.Runtime.NODEJS_22_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline(`
             exports.handler = async (event) => {
               return {
                 statusCode: 200,
                 headers: { 'Content-Type': 'text/html' },
-                body: '<h1>Next.js app not yet deployed. Run deployment workflow.</h1>'
+                body: '<h1>Next.js app not yet deployed. Run deployment workflow to build and push container image.</h1>'
               };
             };
           `),
-      timeout: cdk.Duration.seconds(30),
-      memorySize: 1024,
-      environment: {
-        API_BASE_URL: props.apiGatewayUrl,
-        NODE_ENV: 'production',
-        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
-      },
-    });
+          timeout: cdk.Duration.seconds(30),
+          memorySize: 1024,
+          environment: {
+            API_BASE_URL: props.apiGatewayUrl,
+            NODE_ENV: 'production',
+            AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+          },
+        });
 
     // Add Lambda Function URL
     const functionUrl = this.lambdaFunction.addFunctionUrl({
@@ -232,6 +243,12 @@ export class NextJsLambdaConstruct extends Construct {
       exportName: `${configuration.COMMON.project}-nextjs-distribution-id`,
     });
 
+    new cdk.CfnOutput(this, 'ECRRepositoryUri', {
+      value: this.ecrRepository.repositoryUri,
+      description: 'ECR repository URI for Lambda container images',
+      exportName: `${configuration.COMMON.project}-ecr-repository-uri`,
+    });
+
     // Store parameters in SSM for CI/CD access
     new ssm.StringParameter(this, 'LambdaFunctionNameParam', {
       parameterName: `/${configuration.COMMON.project}/nextjs/lambda-function-name`,
@@ -248,15 +265,9 @@ export class NextJsLambdaConstruct extends Construct {
       stringValue: this.distribution.distributionId,
     });
 
-    // Grant Lambda update permissions to GitHub Actions role
-    const githubActionsRole = iam.Role.fromRoleArn(
-      this,
-      'GitHubActionsRole',
-      props.env.account ? `arn:aws:iam::${props.env.account}:role/GitHubActionsRole` : '',
-      { mutable: false }
-    );
-
-    this.lambdaFunction.grantInvoke(githubActionsRole);
-    this.staticAssetsBucket.grantReadWrite(githubActionsRole);
+    new ssm.StringParameter(this, 'ECRRepositoryUriParam', {
+      parameterName: `/${configuration.COMMON.project}/nextjs/ecr-repository-uri`,
+      stringValue: this.ecrRepository.repositoryUri,
+    });
   }
 }

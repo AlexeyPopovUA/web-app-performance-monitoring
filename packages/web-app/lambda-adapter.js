@@ -1,101 +1,137 @@
-const { parse } = require('url');
-const serverless = require('serverless-http');
+const http = require('http');
+const { spawn } = require('child_process');
 
-// Import the Next.js server
-const NextServer = require('./.next/standalone/server.js');
+// Start the Next.js standalone server
+let serverProcess;
+let serverReady = false;
 
-// Convert Lambda Function URL event to Node.js HTTP request format
-function createRequest(event) {
-  const { rawPath, rawQueryString, headers, body, isBase64Encoded } = event;
-  
-  const url = `${rawPath}${rawQueryString ? `?${rawQueryString}` : ''}`;
-  
-  // Decode body if base64 encoded
-  const decodedBody = isBase64Encoded && body 
-    ? Buffer.from(body, 'base64').toString('utf-8')
-    : body;
+function startNextServer() {
+  return new Promise((resolve, reject) => {
+    // Change to the correct directory where server.js is located
+    const serverPath = require('fs').existsSync('./server.js') 
+      ? './server.js' 
+      : './packages/web-app/server.js';
+    
+    console.log('Starting Next.js server from:', serverPath);
+    
+    // Start the server process
+    serverProcess = spawn('node', [serverPath], {
+      env: { 
+        ...process.env,
+        PORT: '3000',
+        NODE_ENV: 'production'
+      },
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
 
-  return {
-    url,
-    method: event.requestContext.http.method,
-    headers: headers || {},
-    body: decodedBody,
-    rawBody: body,
-    isBase64Encoded
-  };
+    serverProcess.stdout.on('data', (data) => {
+      const output = data.toString();
+      console.log('Server stdout:', output);
+      if (output.includes('Ready in') || output.includes('Starting...')) {
+        serverReady = true;
+        resolve();
+      }
+    });
+
+    serverProcess.stderr.on('data', (data) => {
+      console.error('Server stderr:', data.toString());
+    });
+
+    serverProcess.on('error', (error) => {
+      console.error('Server process error:', error);
+      reject(error);
+    });
+
+    // Give it a few seconds to start
+    setTimeout(() => {
+      if (!serverReady) {
+        serverReady = true; // Assume it's ready
+        resolve();
+      }
+    }, 5000);
+  });
 }
 
-// Main handler for Lambda Function URLs
+// Initialize server on cold start
+let initPromise;
+if (!serverProcess) {
+  initPromise = startNextServer();
+}
+
+// Lambda handler
 exports.handler = async (event, context) => {
-  // Set Lambda context to not wait for empty event loop
-  context.callbackWaitsForEmptyEventLoop = false;
+  // Ensure server is started
+  if (initPromise) {
+    await initPromise;
+    initPromise = null;
+  }
 
   try {
-    // Check if this is a Lambda Function URL event
-    if (event.requestContext && event.requestContext.http) {
-      const request = createRequest(event);
-      
-      // Create a mock HTTP request/response for Next.js
-      const { IncomingMessage, ServerResponse } = require('http');
-      const { Socket } = require('net');
-      
-      const socket = new Socket();
-      const req = new IncomingMessage(socket);
-      const res = new ServerResponse(req);
-      
-      // Set request properties
-      req.url = request.url;
-      req.method = request.method;
-      req.headers = request.headers;
-      req.body = request.body;
-      
-      // Collect response data
-      const responseData = {
-        statusCode: 200,
-        headers: {},
-        body: '',
-        isBase64Encoded: false
-      };
-      
-      // Override response methods
-      const chunks = [];
-      res.write = (chunk) => {
-        chunks.push(chunk);
-        return true;
-      };
-      
-      res.end = (chunk) => {
-        if (chunk) chunks.push(chunk);
-        responseData.body = Buffer.concat(chunks.map(c => 
-          Buffer.isBuffer(c) ? c : Buffer.from(c)
-        )).toString('utf-8');
-      };
-      
-      res.setHeader = (name, value) => {
-        responseData.headers[name.toLowerCase()] = value;
-      };
-      
-      res.writeHead = (statusCode, headers) => {
-        responseData.statusCode = statusCode;
-        if (headers) {
-          Object.entries(headers).forEach(([name, value]) => {
-            responseData.headers[name.toLowerCase()] = value;
-          });
-        }
-      };
-      
-      // Use the serverless-http adapter as fallback
-      const app = serverless(NextServer);
-      const response = await app(event, context);
-      
-      return response;
-    } else {
-      // Fallback for other event types
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Invalid event type' })
-      };
-    }
+    const { rawPath, rawQueryString, headers = {}, body, requestContext } = event;
+    const method = requestContext.http.method;
+    const path = rawPath + (rawQueryString ? `?${rawQueryString}` : '');
+
+    console.log(`Processing ${method} ${path}`);
+
+    // Create request to local Next.js server
+    const options = {
+      hostname: 'localhost',
+      port: 3000,
+      path: path,
+      method: method,
+      headers: {
+        ...headers,
+        host: 'localhost:3000'
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = http.request(options, (res) => {
+        let responseBody = '';
+        const responseHeaders = {};
+
+        // Collect response headers
+        Object.entries(res.headers).forEach(([key, value]) => {
+          responseHeaders[key] = value;
+        });
+
+        // Collect response body
+        res.on('data', (chunk) => {
+          responseBody += chunk;
+        });
+
+        res.on('end', () => {
+          const response = {
+            statusCode: res.statusCode,
+            headers: responseHeaders,
+            body: responseBody,
+            isBase64Encoded: false
+          };
+
+          console.log(`Response: ${res.statusCode} ${responseBody.length} bytes`);
+          resolve(response);
+        });
+      });
+
+      req.on('error', (error) => {
+        console.error('Request error:', error);
+        reject({
+          statusCode: 500,
+          body: JSON.stringify({ 
+            error: 'Internal server error', 
+            message: error.message 
+          })
+        });
+      });
+
+      // Write request body if present
+      if (body) {
+        req.write(body);
+      }
+
+      req.end();
+    });
+
   } catch (error) {
     console.error('Lambda handler error:', error);
     return {

@@ -1,11 +1,11 @@
-import express from "express";
+import express, { Express } from "express";
 import cors from "cors";
 
 import {getCorsCfg} from "./lib/configureCors";
 import {browseReportsHandler} from "./routes/browse-reports";
 import {postTask} from "./routes/task";
 
-const app = express();
+const app: Express = express();
 
 // shared CORS configuration for all routes
 app.use(cors(getCorsCfg()));

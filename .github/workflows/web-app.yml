@@ -62,52 +62,39 @@ jobs:
           API_BASE_URL: https://api.perf-mon.examples.oleksiipopov.com
           NEXT_TELEMETRY_DISABLED: 1
 
-      - name: Prepare deployment package
+      - name: Prepare Docker build context
         run: |
           cd packages/web-app
           
-          # Create deployment directory
-          mkdir -p deployment
+          # Verify required files exist
+          if [ ! -d ".next/standalone" ]; then
+            echo "❌ Standalone build not found. Make sure Next.js build completed successfully."
+            exit 1
+          fi
           
-          # Copy standalone build
-          cp -r .next/standalone/* deployment/
+          if [ ! -f "lambda-adapter.handler" ] && [ ! -f "lambda-adapter.js" ]; then
+            echo "❌ Lambda adapter not found"
+            exit 1
+          fi
           
-          # Copy static files
-          mkdir -p deployment/.next
-          cp -r .next/static deployment/.next/
-          
-          # Copy public files
-          cp -r public deployment/ 2>/dev/null || true
-          
-          # Copy Lambda adapter
-          cp lambda-adapter.js deployment/
-          
-          # Create package.json for Lambda
-          cat > deployment/package.json << EOF
-          {
-            "name": "nextjs-lambda",
-            "version": "1.0.0",
-            "dependencies": {
-              "serverless-http": "^3.2.0"
-            }
-          }
-          EOF
-          
-          # Install production dependencies
-          cd deployment && npm install --production
+          echo "✅ Docker build context prepared successfully"
 
       - name: Create build artifact
         id: artifact
         run: |
-          cd packages/web-app/deployment
-          zip -r ../nextjs-lambda.zip . -x "*.git*"
           echo "name=nextjs-lambda-${{ github.sha }}" >> $GITHUB_OUTPUT
 
-      - name: Upload build artifact
+      - name: Upload build artifact (Docker context)
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.name }}
-          path: packages/web-app/nextjs-lambda.zip
+          path: |
+            packages/web-app/.next/standalone/
+            packages/web-app/.next/static/
+            packages/web-app/public/
+            packages/web-app/lambda-adapter.js
+            packages/web-app/Dockerfile
+            packages/web-app/package.json
           retention-days: 7
 
       - name: Upload static assets artifact
@@ -129,11 +116,11 @@ jobs:
       contents: read
       
     steps:
-      - name: Download Lambda artifact
+      - name: Download Docker build context
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build.outputs.artifact-name }}
-          path: ./deploy
+          path: ./docker-context
 
       - name: Download static assets
         uses: actions/download-artifact@v4
@@ -153,17 +140,51 @@ jobs:
           LAMBDA_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/lambda-function-name" --query 'Parameter.Value' --output text)
           BUCKET_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/static-bucket-name" --query 'Parameter.Value' --output text)
           DISTRIBUTION_ID=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/distribution-id" --query 'Parameter.Value' --output text)
+          ECR_REPOSITORY_URI=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/ecr-repository-uri" --query 'Parameter.Value' --output text)
           
           echo "lambda-name=$LAMBDA_NAME" >> $GITHUB_OUTPUT
           echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
           echo "distribution-id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+          echo "ecr-repository-uri=$ECR_REPOSITORY_URI" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        id: build-image
+        with:
+          context: ./docker-context
+          file: ./docker-context/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+            ${{ steps.params.outputs.ecr-repository-uri }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+        env:
+          IMAGE_URI: ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+
+      - name: Set image URI output
+        id: image-output
+        run: |
+          echo "image-uri=${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Deploy Lambda function
         run: |
-          # Update Lambda function code
+          IMAGE_URI="${{ steps.image-output.outputs.image-uri }}"
+          
+          echo "🚀 Deploying Lambda function with image: $IMAGE_URI"
+          
+          # Update Lambda function code with new container image
           aws lambda update-function-code \
             --function-name ${{ steps.params.outputs.lambda-name }} \
-            --zip-file fileb://deploy/nextjs-lambda.zip \
+            --image-uri "$IMAGE_URI" \
             --publish
           
           # Wait for function to be updated
@@ -172,7 +193,7 @@ jobs:
           
           # Get the published version
           VERSION=$(aws lambda get-function --function-name ${{ steps.params.outputs.lambda-name }} --query 'Configuration.Version' --output text)
-          echo "Deployed Lambda version: $VERSION"
+          echo "✅ Deployed Lambda version: $VERSION"
           
           # Tag the version
           aws lambda tag-resource \
@@ -180,7 +201,8 @@ jobs:
             --tags \
               Environment=${{ github.event.inputs.environment || 'production' }} \
               GitCommit=${{ github.sha }} \
-              DeployedAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+              DeployedAt=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+              ImageUri="$IMAGE_URI"
 
       - name: Upload static assets to S3
         run: |

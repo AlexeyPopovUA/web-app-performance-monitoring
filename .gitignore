@@ -16,3 +16,6 @@ cdk.out
 # Coverage directory
 coverage/
 /packages/web-app/.next/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
