@@ -1,0 +1,446 @@
+name: Unified Infrastructure and Web App Deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/infrastructure/**'
+      - 'packages/web-app/**'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/unified-deployment.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      deploy_infrastructure:
+        description: 'Deploy infrastructure'
+        required: true
+        default: true
+        type: boolean
+      deploy_web_app:
+        description: 'Deploy web application'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  DEFAULT_BRANCH: main
+  AWS_ACCOUNT: ${{ vars.AWS_ACCOUNT }}
+  AWS_DEPLOYMENT_REGION: ${{ vars.AWS_DEPLOYMENT_REGION }}
+  HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+  NODE_VERSION: '22'
+
+jobs:
+  # Determine what needs to be deployed based on changed files
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      infrastructure: ${{ steps.filter.outputs.infrastructure }}
+      web-app: ${{ steps.filter.outputs.web-app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            infrastructure:
+              - 'packages/infrastructure/**'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+            web-app:
+              - 'packages/web-app/**'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+
+  # Deploy infrastructure first
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      (needs.changes.outputs.infrastructure == 'true' || 
+       github.event.inputs.deploy_infrastructure == 'true') &&
+      github.event.inputs.deploy_infrastructure != 'false'
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      lambda-name: ${{ steps.outputs.outputs.lambda-name }}
+      bucket-name: ${{ steps.outputs.outputs.bucket-name }}
+      distribution-id: ${{ steps.outputs.outputs.distribution-id }}
+      ecr-repository-uri: ${{ steps.outputs.outputs.ecr-repository-uri }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and test infrastructure
+        run: |
+          pnpm --filter @web-perf-mon/infrastructure build
+          pnpm --filter @web-perf-mon/infrastructure test
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_DEPLOYMENT_REGION }}
+          role-to-assume: ${{ vars.AWS_AUTH_ROLE }}
+
+      - name: Deploy infrastructure
+        run: pnpm --filter @web-perf-mon/infrastructure cdk deploy --all --require-approval never
+        env:
+          GRAPHITE_AUTH: ${{ secrets.GRAPHITE_AUTH }}
+          IDLE_MODE: ${{ vars.IDLE_MODE }}
+          API_KEY: ${{ secrets.API_KEY }}
+
+      - name: Export infrastructure outputs
+        id: outputs
+        run: |
+          # Retrieve deployment outputs from SSM Parameter Store
+          LAMBDA_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/lambda-function-name" --query 'Parameter.Value' --output text || echo "")
+          BUCKET_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/static-bucket-name" --query 'Parameter.Value' --output text || echo "")
+          DISTRIBUTION_ID=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/distribution-id" --query 'Parameter.Value' --output text || echo "")
+          ECR_REPOSITORY_URI=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/ecr-repository-uri" --query 'Parameter.Value' --output text || echo "")
+          
+          echo "lambda-name=$LAMBDA_NAME" >> $GITHUB_OUTPUT
+          echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "distribution-id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+          echo "ecr-repository-uri=$ECR_REPOSITORY_URI" >> $GITHUB_OUTPUT
+          
+          echo "Infrastructure outputs:"
+          echo "  Lambda: $LAMBDA_NAME"
+          echo "  Bucket: $BUCKET_NAME"
+          echo "  Distribution: $DISTRIBUTION_ID"
+          echo "  ECR: $ECR_REPOSITORY_URI"
+
+  # Build web application
+  build-web-app:
+    name: Build Web Application
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      (needs.changes.outputs.web-app == 'true' || 
+       github.event.inputs.deploy_web_app == 'true') &&
+      github.event.inputs.deploy_web_app != 'false'
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/web-app/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('packages/web-app/package.json', 'pnpm-lock.yaml') }}-${{ hashFiles('packages/web-app/**/*.js', 'packages/web-app/**/*.jsx', 'packages/web-app/**/*.ts', 'packages/web-app/**/*.tsx') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('packages/web-app/package.json', 'pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
+
+      - name: Run tests
+        run: |
+          cd packages/web-app
+          pnpm test --passWithNoTests
+
+      - name: Build Next.js application
+        run: |
+          cd packages/web-app
+          NEXT_TELEMETRY_DISABLED=1 pnpm build
+        env:
+          API_BASE_URL: https://api.perf-mon.examples.oleksiipopov.com
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Prepare Docker build context
+        run: |
+          cd packages/web-app
+          
+          # Verify required files exist
+          if [ ! -d ".next/standalone" ]; then
+            echo "❌ Standalone build not found. Make sure Next.js build completed successfully."
+            exit 1
+          fi
+          
+          if [ ! -f "lambda-adapter.handler" ] && [ ! -f "lambda-adapter.js" ]; then
+            echo "❌ Lambda adapter not found"
+            exit 1
+          fi
+          
+          echo "✅ Docker build context prepared successfully"
+
+      - name: Create build artifact
+        id: artifact
+        run: |
+          echo "name=nextjs-lambda-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifact (Docker context)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: |
+            packages/web-app/.next/standalone/
+            packages/web-app/.next/static/
+            packages/web-app/lambda-adapter.js
+            packages/web-app/Dockerfile
+            packages/web-app/package.json
+          include-hidden-files: false
+          retention-days: 7
+
+      - name: Upload static assets artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-assets-${{ github.sha }}
+          path: |
+            packages/web-app/.next/static
+            packages/web-app/public
+          retention-days: 7
+
+  # Deploy web application (depends on infrastructure)
+  deploy-web-app:
+    name: Deploy Web Application
+    runs-on: ubuntu-latest
+    needs: [build-web-app, deploy-infrastructure, changes]
+    # Only run if web app needs deployment and either infrastructure was just deployed or already exists
+    if: |
+      always() &&
+      (needs.build-web-app.result == 'success' || needs.build-web-app.result == 'skipped') &&
+      (needs.deploy-infrastructure.result == 'success' || needs.deploy-infrastructure.result == 'skipped') &&
+      ((needs.changes.outputs.web-app == 'true' || github.event.inputs.deploy_web_app == 'true') &&
+       github.event.inputs.deploy_web_app != 'false')
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    permissions:
+      id-token: write
+      contents: read
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download Docker build context
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-web-app.outputs.artifact-name }}
+          path: ./docker-context
+
+      - name: Download static assets
+        uses: actions/download-artifact@v4
+        with:
+          name: static-assets-${{ github.sha }}
+          path: ./static
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_DEPLOYMENT_REGION }}
+          role-to-assume: ${{ vars.AWS_AUTH_ROLE }}
+
+      - name: Get deployment parameters
+        id: params
+        run: |
+          # Try to get from infrastructure job outputs first, fallback to SSM
+          if [ -n "${{ needs.deploy-infrastructure.outputs.lambda-name }}" ]; then
+            echo "Using outputs from infrastructure deployment"
+            echo "lambda-name=${{ needs.deploy-infrastructure.outputs.lambda-name }}" >> $GITHUB_OUTPUT
+            echo "bucket-name=${{ needs.deploy-infrastructure.outputs.bucket-name }}" >> $GITHUB_OUTPUT
+            echo "distribution-id=${{ needs.deploy-infrastructure.outputs.distribution-id }}" >> $GITHUB_OUTPUT
+            echo "ecr-repository-uri=${{ needs.deploy-infrastructure.outputs.ecr-repository-uri }}" >> $GITHUB_OUTPUT
+          else
+            echo "Fetching parameters from SSM"
+            LAMBDA_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/lambda-function-name" --query 'Parameter.Value' --output text)
+            BUCKET_NAME=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/static-bucket-name" --query 'Parameter.Value' --output text)
+            DISTRIBUTION_ID=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/distribution-id" --query 'Parameter.Value' --output text)
+            ECR_REPOSITORY_URI=$(aws ssm get-parameter --name "/web-perf-mon/nextjs/ecr-repository-uri" --query 'Parameter.Value' --output text)
+            
+            echo "lambda-name=$LAMBDA_NAME" >> $GITHUB_OUTPUT
+            echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+            echo "distribution-id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+            echo "ecr-repository-uri=$ECR_REPOSITORY_URI" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        id: build-image
+        with:
+          context: ./docker-context
+          file: ./docker-context/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+            ${{ steps.params.outputs.ecr-repository-uri }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Update Lambda function
+        run: |
+          echo "🚀 Updating Lambda function with new container image"
+          
+          # Update the Lambda function to use the new image
+          aws lambda update-function-code \
+            --function-name ${{ steps.params.outputs.lambda-name }} \
+            --image-uri ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+          
+          # Wait for the update to complete
+          echo "⏳ Waiting for Lambda function update to complete..."
+          aws lambda wait function-updated \
+            --function-name ${{ steps.params.outputs.lambda-name }}
+          
+          echo "✅ Lambda function updated successfully"
+
+      - name: Upload static assets to S3
+        run: |
+          # Upload Next.js static files
+          if [ -d "static/.next/static" ]; then
+            aws s3 sync static/.next/static/ s3://${{ steps.params.outputs.bucket-name }}/_next/static/ \
+              --delete \
+              --cache-control "public, max-age=31536000, immutable" \
+              --metadata-directive REPLACE
+          fi
+          
+          # Upload public assets
+          if [ -d "static/public" ]; then
+            # Upload files with appropriate cache headers
+            find static/public -type f -name "*.ico" -o -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.svg" | while read file; do
+              relative_path=${file#static/public/}
+              aws s3 cp "$file" "s3://${{ steps.params.outputs.bucket-name }}/$relative_path" \
+                --cache-control "public, max-age=86400" \
+                --metadata-directive REPLACE
+            done
+            
+            # Upload other files
+            find static/public -type f ! -name "*.ico" ! -name "*.png" ! -name "*.jpg" ! -name "*.jpeg" ! -name "*.svg" | while read file; do
+              relative_path=${file#static/public/}
+              aws s3 cp "$file" "s3://${{ steps.params.outputs.bucket-name }}/$relative_path" \
+                --cache-control "public, max-age=3600" \
+                --metadata-directive REPLACE
+            done
+          fi
+
+      - name: Invalidate CloudFront cache
+        run: |
+          # Create invalidation for all paths
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.params.outputs.distribution-id }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          
+          echo "Created CloudFront invalidation: $INVALIDATION_ID"
+
+      - name: Verify deployment
+        run: |
+          # Get Lambda function URL
+          FUNCTION_URL=$(aws lambda get-function-url-config \
+            --function-name ${{ steps.params.outputs.lambda-name }} \
+            --query 'FunctionUrl' \
+            --output text || echo "")
+          
+          if [ -n "$FUNCTION_URL" ]; then
+            echo "Lambda Function URL: $FUNCTION_URL"
+            
+            # Test Lambda directly
+            response=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTION_URL" || echo "000")
+            if [ "$response" -eq 200 ]; then
+              echo "✅ Lambda function is responding correctly"
+            else
+              echo "❌ Lambda function returned HTTP $response"
+              exit 1
+            fi
+          fi
+          
+          # Test CloudFront distribution
+          DISTRIBUTION_URL="https://${{ vars.DOMAIN_NAME || 'app.perf-mon.examples.oleksiipopov.com' }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$DISTRIBUTION_URL" || echo "000")
+          if [ "$response" -eq 200 ]; then
+            echo "✅ CloudFront distribution is serving correctly"
+          else
+            echo "⚠️ CloudFront distribution returned HTTP $response (may need time to propagate)"
+          fi
+
+  # Summary job
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-infrastructure, deploy-web-app, changes]
+    if: always()
+    steps:
+      - name: Create deployment summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## Deployment Summary
+          
+          ### Environment
+          - **Target**: ${{ github.event.inputs.environment || 'production' }}
+          - **Commit**: ${{ github.sha }}
+          - **Triggered by**: ${{ github.event_name }}
+          
+          ### Components Deployed
+          
+          | Component | Status | Changed Files |
+          |-----------|--------|---------------|
+          | Infrastructure | ${{ needs.deploy-infrastructure.result || 'skipped' }} | ${{ needs.changes.outputs.infrastructure == 'true' && '✅' || '➖' }} |
+          | Web Application | ${{ needs.deploy-web-app.result || 'skipped' }} | ${{ needs.changes.outputs.web-app == 'true' && '✅' || '➖' }} |
+          
+          ### Resources
+          - **URL**: https://${{ vars.DOMAIN_NAME || 'app.perf-mon.examples.oleksiipopov.com' }}
+          - **AWS Region**: ${{ env.AWS_DEPLOYMENT_REGION }}
+          
+          ### Next Steps
+          1. Monitor Lambda function logs in CloudWatch
+          2. Check CloudFront distribution metrics
+          3. Verify application functionality
+          
+          EOF

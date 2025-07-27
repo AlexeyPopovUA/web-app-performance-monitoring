@@ -56,14 +56,13 @@ export class NextJsLambdaConstruct extends Construct {
 
     // Create Lambda function using container image from ECR
     this.lambdaFunction = new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
-      functionName: `${configuration.COMMON.project}-nextjs-lambda`,
+      functionName: `${configuration.COMMON.project}-nextjs-lambda-v2`,
       code: lambda.Code.fromEcrImage(this.ecrRepository, {
         tagOrDigest: 'latest',
         cmd: ['lambda-adapter.handler'],
       }),
       handler: lambda.Handler.FROM_IMAGE, // Required for container-based functions
       runtime: lambda.Runtime.FROM_IMAGE,  // Required for container-based functions
-      packageType: lambda.PackageType.IMAGE, // Explicitly set package type to IMAGE
       timeout: cdk.Duration.seconds(30),
       memorySize: 1024,
       environment: {
