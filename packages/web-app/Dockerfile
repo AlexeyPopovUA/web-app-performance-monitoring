@@ -5,16 +5,16 @@ FROM public.ecr.aws/lambda/nodejs:22
 WORKDIR ${LAMBDA_TASK_ROOT}
 
 # Copy Next.js standalone build first
-COPY packages/web-app/.next/standalone/ ./
+COPY .next/standalone/ ./
 
 # Copy static files (these will be served by CloudFront, but needed for Next.js internals)
-COPY packages/web-app/.next/static ./.next/static/
+COPY .next/static ./.next/static/
 
 # Copy Lambda adapter
-COPY packages/web-app/lambda-adapter.js ./
+COPY lambda-adapter.js ./
 
 # Copy public files (now guaranteed to exist)
-COPY packages/web-app/public/ ./public/
+COPY public/ ./public/
 
 # Install serverless-http separately to avoid dependency conflicts
 RUN cd /tmp && \
