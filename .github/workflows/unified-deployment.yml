@@ -324,20 +324,34 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-      - name: Update infrastructure to use container image
+      - name: Update Lambda function to use container image
         run: |
-          echo "🚀 Updating infrastructure to use container image"
+          echo "🚀 Updating Lambda function to use container image"
           
-          # Create a temporary file to indicate we want to use container image
-          echo "CONTAINER_DEPLOYMENT=true" > packages/infrastructure/.container-ready
+          # Check current package type
+          CURRENT_PACKAGE_TYPE=$(aws lambda get-function --function-name ${{ steps.params.outputs.lambda-name }} --query 'Configuration.PackageType' --output text)
+          echo "Current package type: $CURRENT_PACKAGE_TYPE"
           
-          # Build infrastructure (this creates the dist directory with Lambda assets)
-          pnpm --filter @web-perf-mon/infrastructure build
+          if [ "$CURRENT_PACKAGE_TYPE" = "Zip" ]; then
+            echo "Converting Lambda from Zip to Image package type..."
+            
+            # For Zip to Image conversion, we need to use update-function-code
+            aws lambda update-function-code \
+              --function-name ${{ steps.params.outputs.lambda-name }} \
+              --image-uri ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+          else
+            # Direct code update for Image package type
+            aws lambda update-function-code \
+              --function-name ${{ steps.params.outputs.lambda-name }} \
+              --image-uri ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
+          fi
           
-          # Deploy the updated infrastructure
-          pnpm --filter @web-perf-mon/infrastructure cdk deploy --all --require-approval never
+          # Wait for the update to complete
+          echo "⏳ Waiting for Lambda function update to complete..."
+          aws lambda wait function-updated \
+            --function-name ${{ steps.params.outputs.lambda-name }}
           
-          echo "✅ Infrastructure updated to use container image"
+          echo "✅ Lambda function updated to use container image"
 
       - name: Upload static assets to S3
         run: |
