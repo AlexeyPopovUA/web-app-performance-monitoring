@@ -77,6 +77,9 @@ jobs:
             exit 1
           fi
           
+          # Ensure public directory exists (create empty if missing)
+          mkdir -p public
+          
           echo "✅ Docker build context prepared successfully"
 
       - name: Create build artifact
