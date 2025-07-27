@@ -324,46 +324,20 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-      - name: Update Lambda function
+      - name: Update infrastructure to use container image
         run: |
-          echo "🚀 Updating Lambda function with new container image"
+          echo "🚀 Updating infrastructure to use container image"
           
-          # Check current package type
-          CURRENT_PACKAGE_TYPE=$(aws lambda get-function --function-name ${{ steps.params.outputs.lambda-name }} --query 'Configuration.PackageType' --output text)
-          echo "Current package type: $CURRENT_PACKAGE_TYPE"
+          # First, update the CDK infrastructure to switch to container image
+          cd packages/infrastructure
           
-          if [ "$CURRENT_PACKAGE_TYPE" = "Zip" ]; then
-            echo "Converting Lambda from Zip to Image package type..."
-            
-            # Update function configuration to use container image
-            aws lambda update-function-configuration \
-              --function-name ${{ steps.params.outputs.lambda-name }} \
-              --package-type Image \
-              --timeout 30 \
-              --memory-size 1024
-            
-            # Wait for configuration update to complete
-            echo "⏳ Waiting for configuration update to complete..."
-            aws lambda wait function-updated \
-              --function-name ${{ steps.params.outputs.lambda-name }}
-            
-            # Now update the code with container image
-            aws lambda update-function-code \
-              --function-name ${{ steps.params.outputs.lambda-name }} \
-              --image-uri ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
-          else
-            # Direct code update for Image package type
-            aws lambda update-function-code \
-              --function-name ${{ steps.params.outputs.lambda-name }} \
-              --image-uri ${{ steps.params.outputs.ecr-repository-uri }}:${{ github.sha }}
-          fi
+          # Create a temporary file to indicate we want to use container image
+          echo "CONTAINER_DEPLOYMENT=true" > .container-ready
           
-          # Wait for the final update to complete
-          echo "⏳ Waiting for Lambda function update to complete..."
-          aws lambda wait function-updated \
-            --function-name ${{ steps.params.outputs.lambda-name }}
+          # Deploy the updated infrastructure
+          pnpm run cdk deploy --all --require-approval never
           
-          echo "✅ Lambda function updated successfully"
+          echo "✅ Infrastructure updated to use container image"
 
       - name: Upload static assets to S3
         run: |

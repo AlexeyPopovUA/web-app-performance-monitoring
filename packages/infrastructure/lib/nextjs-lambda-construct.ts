@@ -49,25 +49,13 @@ export class NextJsLambdaConstruct extends Construct {
       emptyOnDelete: true,
     });
 
-    // Check if Next.js build exists (for initial deployment)
-    const webAppPath = path.join(__dirname, '../../web-app');
-    const standalonePath = path.join(webAppPath, '.next/standalone');
-    const hasStandaloneBuild = fs.existsSync(standalonePath);
+    // Check if container deployment is ready
+    const containerReadyPath = path.join(__dirname, '../.container-ready');
+    const useContainerImage = fs.existsSync(containerReadyPath);
 
-    // Create Lambda function - initially with a placeholder, will be updated with container image later
-    this.lambdaFunction = new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, {
+    // Create Lambda function - use container image if ready, otherwise placeholder
+    const lambdaProps: any = {
       functionName: `${configuration.COMMON.project}-nextjs-lambda-v2`,
-      code: lambda.Code.fromInline(`
-        exports.handler = async (event) => {
-          return {
-            statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: 'Lambda function awaiting container deployment' }),
-          };
-        };
-      `),
-      handler: 'index.handler',
-      runtime: lambda.Runtime.NODEJS_22_X,
       timeout: cdk.Duration.seconds(30),
       memorySize: 1024,
       environment: {
@@ -75,7 +63,32 @@ export class NextJsLambdaConstruct extends Construct {
         NODE_ENV: 'production',
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       },
-    });
+    };
+
+    if (useContainerImage) {
+      // Use container image from ECR
+      lambdaProps.code = lambda.Code.fromEcrImage(this.ecrRepository, {
+        tagOrDigest: 'latest',
+        cmd: ['lambda-adapter.handler'],
+      });
+      lambdaProps.handler = lambda.Handler.FROM_IMAGE;
+      lambdaProps.runtime = lambda.Runtime.FROM_IMAGE;
+    } else {
+      // Use placeholder Node.js code for initial deployment
+      lambdaProps.code = lambda.Code.fromInline(`
+        exports.handler = async (event) => {
+          return {
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: 'Lambda function awaiting container deployment' }),
+          };
+        };
+      `);
+      lambdaProps.handler = 'index.handler';
+      lambdaProps.runtime = lambda.Runtime.NODEJS_22_X;
+    }
+
+    this.lambdaFunction = new lambda.Function(this, `${configuration.COMMON.project}-nextjs-lambda`, lambdaProps);
 
     // Grant Lambda permission to pull images from ECR (needed for later container updates)
     this.ecrRepository.grantPull(this.lambdaFunction);
