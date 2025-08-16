@@ -13,12 +13,17 @@ import configuration from "../cfg/configuration";
 interface CloudFrontConstructProps {
   env: Required<cdk.Environment>
   reportBucket: s3.IBucket;
+  webAppBucket: s3.IBucket;
   apiGateway: apigateway.RestApi;
   domainName: string;
+  webAppDomainName: string;
   certificateArn: string;
 }
 
 export class CloudfrontConstruct extends Construct {
+  public readonly distribution: cloudfront.Distribution;
+  public readonly webAppDistribution: cloudfront.Distribution;
+
   constructor(scope: Construct, id: string, props: CloudFrontConstructProps) {
     super(scope, id);
 
@@ -32,7 +37,7 @@ export class CloudfrontConstruct extends Construct {
       zoneName: configuration.HOSTING.hostedZoneName
     });
 
-    // Create custom cache policy with 5-minute TTL
+    // Create custom cache policy with 5-minute TTL for API
     const customCachePolicy = new cloudfront.CachePolicy(this, `${configuration.COMMON.project}-proxy-cache-policy`, {
       cachePolicyName: `${configuration.COMMON.project}-proxy-cache-policy`,
       defaultTtl: cdk.Duration.minutes(5),
@@ -43,8 +48,30 @@ export class CloudfrontConstruct extends Construct {
       cookieBehavior: cloudfront.CacheCookieBehavior.none(),
     });
 
-    // Create CloudFront distribution
-    const distribution = new cloudfront.Distribution(this, `${configuration.COMMON.project}-proxy-cdn`, {
+    // Create cache policy for web app static assets
+    const webAppCachePolicy = new cloudfront.CachePolicy(this, `${configuration.COMMON.project}-web-app-cache-policy`, {
+      cachePolicyName: `${configuration.COMMON.project}-web-app-cache-policy`,
+      defaultTtl: cdk.Duration.days(1),
+      maxTtl: cdk.Duration.days(365),
+      minTtl: cdk.Duration.seconds(0),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+    });
+
+    // Create cache policy for web app HTML files
+    const webAppHtmlCachePolicy = new cloudfront.CachePolicy(this, `${configuration.COMMON.project}-web-app-html-cache-policy`, {
+      cachePolicyName: `${configuration.COMMON.project}-web-app-html-cache-policy`,
+      defaultTtl: cdk.Duration.seconds(0),
+      maxTtl: cdk.Duration.days(1),
+      minTtl: cdk.Duration.seconds(0),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+    });
+
+    // Create API CloudFront distribution
+    this.distribution = new cloudfront.Distribution(this, `${configuration.COMMON.project}-proxy-cdn`, {
       defaultBehavior: {
         origin: new origins.HttpOrigin(`${props.apiGateway.restApiId}.execute-api.${props.env.region}.amazonaws.com`, {
           originPath: `/${props.apiGateway.deploymentStage.stageName}`,
@@ -58,45 +85,118 @@ export class CloudfrontConstruct extends Construct {
           headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("x-api-key")
         })
       },
+      additionalBehaviors: {
+        '/reports/*': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(props.reportBucket, {
+            originAccessLevels: [cloudfront.AccessLevel.READ, cloudfront.AccessLevel.LIST],
+          }),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        }
+      },
       domainNames: [props.domainName],
       certificate,
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       defaultRootObject: 'index.html'
     });
 
-    // Add S3 bucket as origin with OAC
-    const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(props.reportBucket, {
-      originAccessLevels: [cloudfront.AccessLevel.READ, cloudfront.AccessLevel.LIST],
-    });
-
-    distribution.addBehavior('/reports/*',
-      s3Origin,
-      {
+    // Create Web App CloudFront distribution
+    this.webAppDistribution = new cloudfront.Distribution(this, `${configuration.COMMON.project}-web-app-cdn`, {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
+          originPath: '/main', // Serve from main branch directory
+          originAccessLevels: [cloudfront.AccessLevel.READ],
+        }),
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-      }
-    );
+        cachePolicy: webAppHtmlCachePolicy,
+      },
+      additionalBehaviors: {
+        // Cache static assets longer
+        '/_next/*': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
+            originPath: '/main',
+            originAccessLevels: [cloudfront.AccessLevel.READ],
+          }),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: webAppCachePolicy,
+        },
+        // Cache other static assets
+        '*.js': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
+            originPath: '/main',
+            originAccessLevels: [cloudfront.AccessLevel.READ],
+          }),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: webAppCachePolicy,
+        },
+        '*.css': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
+            originPath: '/main',
+            originAccessLevels: [cloudfront.AccessLevel.READ],
+          }),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: webAppCachePolicy,
+        },
+      },
+      domainNames: [props.webAppDomainName],
+      certificate,
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      defaultRootObject: 'index.html',
+      errorResponses: [
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html', // SPA fallback
+        },
+      ],
+    });
 
-    // Remove manual bucket policy, let CDK manage OAC permissions
-    // (No custom bucketPolicy or addToResourcePolicy here)
-
+    // DNS records for API distribution
     new route53.ARecord(this, `${configuration.COMMON.project}-reports-a-record`, {
       recordName: configuration.HOSTING.domainName,
       zone: hostedZone,
-      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution))
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.distribution))
     });
 
     new route53.AaaaRecord(this, `${configuration.COMMON.project}-reports-aaaa-record`, {
       recordName: configuration.HOSTING.domainName,
       zone: hostedZone,
-      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution))
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.distribution))
     });
 
-    // Output the CloudFront URL
+    // DNS records for Web App distribution
+    new route53.ARecord(this, `${configuration.COMMON.project}-web-app-a-record`, {
+      recordName: props.webAppDomainName,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.webAppDistribution))
+    });
+
+    new route53.AaaaRecord(this, `${configuration.COMMON.project}-web-app-aaaa-record`, {
+      recordName: props.webAppDomainName,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.webAppDistribution))
+    });
+
+    // Output the CloudFront URLs
     new cdk.CfnOutput(this, 'DistributionDomainName', {
-      value: distribution.distributionDomainName,
-      description: 'The domain name of the CloudFront distribution',
+      value: this.distribution.distributionDomainName,
+      description: 'The domain name of the API CloudFront distribution',
+    });
+
+    new cdk.CfnOutput(this, 'WebAppDistributionDomainName', {
+      value: this.webAppDistribution.distributionDomainName,
+      description: 'The domain name of the Web App CloudFront distribution',
+    });
+
+    new cdk.CfnOutput(this, 'WebAppDistributionId', {
+      value: this.webAppDistribution.distributionId,
+      description: 'The ID of the Web App CloudFront distribution',
+      exportName: `${configuration.COMMON.project}-web-app-distribution-id`,
     });
   }
 }
