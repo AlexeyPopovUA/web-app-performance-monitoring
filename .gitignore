@@ -22,3 +22,4 @@ coverage/
 
 # Next.js build cache
 /packages/web-app/.next/cache/
+/packages/web-app/out/

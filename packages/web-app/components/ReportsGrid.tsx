@@ -1,3 +1,5 @@
+"use client";
+
 type SingleReport = {
   projectName: string;
   variantName: string;
