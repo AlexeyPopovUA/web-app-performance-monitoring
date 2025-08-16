@@ -7,7 +7,6 @@ import {ClusterConstruct} from "./task-processing-constructs/ClusterConstruct";
 import {ApiGatewayConstruct} from "./api-gateway-construct";
 import {CloudfrontConstruct} from "./cloudfront-construct";
 import {S3BucketsConstruct} from "./s3-buckets-construct";
-import {WebAppS3Construct} from "./web-app-s3-construct";
 import {VpcConstruct} from "./vpc-construct";
 
 import configuration from "../cfg/configuration";
@@ -33,15 +32,10 @@ export class MainStack extends cdk.NestedStack {
     });
 
     const s3BucketsConstruct = new S3BucketsConstruct(this, `${configuration.COMMON.project}-S3BucketsConstruct`, {
-      bucketName: configuration.REPORTING.bucketName,
-      temporaryBucketName: configuration.REPORTING.temporaryBucketName,
+      reportBucketName: configuration.REPORTING.bucketName,
+      temporaryReportBucketName: configuration.REPORTING.temporaryBucketName,
+      webAppBucketName: configuration.HOSTING.webAppBucketName,
       project: configuration.COMMON.project,
-    });
-
-    // Create web app S3 bucket
-    const webAppS3Construct = new WebAppS3Construct(this, `${configuration.COMMON.project}-WebAppS3Construct`, {
-      project: configuration.COMMON.project,
-      bucketName: `${configuration.COMMON.project}-web-app-hosting`,
     });
 
     const stateMachineConstruction = new StateMachineConstruct(this, `${configuration.COMMON.project}-StateMachineConstruct`, {
@@ -66,7 +60,7 @@ export class MainStack extends cdk.NestedStack {
     const cloudFrontConstruct = new CloudfrontConstruct(this, `${configuration.COMMON.project}-CloudfrontConstruct`, {
       env,
       reportBucket: s3BucketsConstruct.reportBucket,
-      webAppBucket: webAppS3Construct.webAppBucket,
+      webAppBucket: s3BucketsConstruct.webAppBucket,
       apiGateway: apiConstruct.api,
       domainName: configuration.HOSTING.domainName,
       webAppDomainName: configuration.HOSTING.staticDomainName,
@@ -82,7 +76,7 @@ export class MainStack extends cdk.NestedStack {
     // Store deployment parameters in SSM for GitHub Actions
     new ssm.StringParameter(this, `${configuration.COMMON.project}-web-app-bucket-param`, {
       parameterName: '/web-perf-mon/web-app/bucket-name',
-      stringValue: webAppS3Construct.webAppBucket.bucketName,
+      stringValue: s3BucketsConstruct.webAppBucket.bucketName,
       description: 'S3 bucket name for web app hosting',
     });
 
@@ -94,7 +88,7 @@ export class MainStack extends cdk.NestedStack {
 
     // Export bucket name for cross-stack reference
     new cdk.CfnOutput(this, 'WebAppBucketName', {
-      value: webAppS3Construct.webAppBucket.bucketName,
+      value: s3BucketsConstruct.webAppBucket.bucketName,
       description: 'S3 bucket name for web app hosting',
       exportName: `${configuration.COMMON.project}-web-app-bucket-name`,
     });

@@ -12,6 +12,7 @@ export default {
     hostedZoneName: "oleksiipopov.com",
     staticDomainName: "app.perf-mon.examples.oleksiipopov.com",
     domainName: "api.perf-mon.examples.oleksiipopov.com",
+    webAppBucketName: "web-perf-mon-web-app-bucket"
   },
   SECURITY: {
     apiKey: process.env?.API_KEY || `perf-mon-key-${Date.now()}` // Generate unique default key
