@@ -15,8 +15,6 @@ interface CloudFrontConstructProps {
   reportBucket: s3.IBucket;
   webAppBucket: s3.IBucket;
   apiGateway: apigateway.RestApi;
-  domainName: string;
-  webAppDomainName: string;
   certificateArn: string;
 }
 
@@ -95,7 +93,7 @@ export class CloudfrontConstruct extends Construct {
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
         }
       },
-      domainNames: [props.domainName],
+      domainNames: [configuration.HOSTING.domainName],
       certificate,
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       defaultRootObject: 'index.html'
@@ -143,7 +141,7 @@ export class CloudfrontConstruct extends Construct {
           cachePolicy: webAppCachePolicy,
         },
       },
-      domainNames: [props.webAppDomainName],
+      domainNames: [configuration.HOSTING.staticDomainName],
       certificate,
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       defaultRootObject: 'index.html',
@@ -171,13 +169,13 @@ export class CloudfrontConstruct extends Construct {
 
     // DNS records for Web App distribution
     new route53.ARecord(this, `${configuration.COMMON.project}-web-app-a-record`, {
-      recordName: props.webAppDomainName,
+      recordName: configuration.HOSTING.staticDomainName,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.webAppDistribution))
     });
 
     new route53.AaaaRecord(this, `${configuration.COMMON.project}-web-app-aaaa-record`, {
-      recordName: props.webAppDomainName,
+      recordName: configuration.HOSTING.staticDomainName,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.webAppDistribution))
     });

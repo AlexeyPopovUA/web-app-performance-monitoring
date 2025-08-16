@@ -62,8 +62,6 @@ export class MainStack extends cdk.NestedStack {
       reportBucket: s3BucketsConstruct.reportBucket,
       webAppBucket: s3BucketsConstruct.webAppBucket,
       apiGateway: apiConstruct.api,
-      domainName: configuration.HOSTING.domainName,
-      webAppDomainName: configuration.HOSTING.staticDomainName,
       certificateArn: props.certificateArn
     });
 
