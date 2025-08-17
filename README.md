@@ -4,9 +4,10 @@ This project provides AWS-based infrastructure for monitoring web application pe
 
 ## Architecture
 
-- **Infrastructure**: AWS CDK stacks with Lambda functions, Step Functions, ECS, and CloudFront
-- **Web App**: Next.js application with ISR (Incremental Static Regeneration) hosted on Lambda
-- **Workspaces**: pnpm workspaces for organized development
+- **Infrastructure**: AWS CDK stacks with Lambda functions, Step Functions, S3, and CloudFront
+- **Web App**: Next.js application with Static Site Generation (SSG) hosted on S3/CloudFront
+- **Shared Types**: Centralized TypeScript types for consistent data structures across packages
+- **Workspaces**: pnpm workspaces for organized monorepo development
 
 ## Project Structure
 
@@ -14,23 +15,36 @@ This project provides AWS-based infrastructure for monitoring web application pe
 ├── packages/
 │   ├── infrastructure/     # AWS CDK infrastructure
 │   │   ├── lib/           # CDK constructs and stacks
+│   │   │   ├── lambda/    # Lambda functions for API and Step Functions
+│   │   │   ├── task-processing-constructs/  # ECS and Step Function constructs
+│   │   │   └── utils/     # Shared utilities
 │   │   ├── bin/           # CDK app entry point
 │   │   ├── cfg/           # Configuration
+│   │   ├── examples/      # API examples and sample data
 │   │   └── tests/         # Infrastructure tests
+│   ├── shared/            # Shared TypeScript types and utilities
+│   │   └── src/           # Type definitions (GroupedReports, SingleReport)
 │   └── web-app/           # Next.js application
-│       ├── pages/         # Next.js pages
-│       ├── components/    # React components
-│       └── styles/        # Styling
-├── .github/workflows/     # Separate CI/CD pipelines
+│       ├── app/           # Next.js App Router pages
+│       └── components/    # React components (ReportsGrid)
+├── .github/workflows/     # CI/CD pipelines for infrastructure and web app
 └── pnpm-workspace.yaml   # Workspace configuration
 ```
+
+## Key Features
+
+- **Performance Monitoring**: Automated web application performance testing using Step Functions and ECS
+- **Report Dashboard**: Interactive Next.js dashboard for viewing performance reports
+- **Type Safety**: Shared TypeScript types ensure consistency across infrastructure and frontend
+- **AWS Integration**: Fully serverless architecture with S3, Lambda, CloudFront, and ECS
+- **CI/CD**: Separate deployment pipelines for infrastructure and web application
 
 ## Development
 
 ### Prerequisites
 
 - Node.js 22+
-- pnpm
+- pnpm 10.13+
 - AWS CLI configured
 - AWS CDK CLI
 
@@ -39,6 +53,9 @@ This project provides AWS-based infrastructure for monitoring web application pe
 ```bash
 # Install dependencies for all workspaces
 pnpm install
+
+# Build shared types first
+pnpm --filter @web-perf-mon/shared build
 
 # Start Next.js development server
 pnpm dev
@@ -50,72 +67,33 @@ pnpm build
 pnpm test
 ```
 
-### Infrastructure Commands
+### Workspace Commands
 
 ```bash
-# Deploy infrastructure
-pnpm infra:deploy
-
-# Show infrastructure diff
-pnpm infra:diff
-
-# Work with infrastructure only
+# Work with specific packages
 pnpm --filter @web-perf-mon/infrastructure <command>
-```
-
-### Web App Commands
-
-```bash
-# Start development server
-pnpm --filter @web-perf-mon/web-app dev
-
-# Build production version
-pnpm --filter @web-perf-mon/web-app build
-
-# Run production server locally
-pnpm --filter @web-perf-mon/web-app start
+pnpm --filter @web-perf-mon/web-app <command>
+pnpm --filter @web-perf-mon/shared <command>
 ```
 
 ## Deployment
 
-The project uses separate GitHub Actions workflows:
+The project uses GitHub Actions for automated deployments:
 
-### Infrastructure Deployment (`infrastructure.yml`)
-- Triggers on changes to `packages/infrastructure/**`
-- Deploys AWS CDK stacks
-- Creates Lambda functions, CloudFront distributions, etc.
+- **Infrastructure Pipeline**: Deploys AWS resources when `packages/infrastructure/` or `packages/shared/` changes
+- **Web App Pipeline**: Builds and deploys the Next.js app to S3/CloudFront when `packages/web-app/` or `packages/shared/` changes
 
-### Web App Deployment (`web-app.yml`) 
-- Triggers on changes to `packages/web-app/**`
-- Builds Next.js application
-- Deploys to Lambda with ISR support
-- Uploads static assets to S3
-- Invalidates CloudFront cache
+## Environment Configuration
 
-## Features
+Set the following environment variables:
 
-### Next.js Web Application
-- **ISR**: Pages regenerate every 5 minutes with fresh data
-- **Performance**: Fast loading with CloudFront CDN
-- **Responsive**: Mobile-friendly design
-- **Real-time**: Shows latest performance reports
+- `AWS_ACCOUNT`: AWS Account ID
+- `AWS_DEPLOYMENT_REGION`: Primary deployment region
+- `HOSTED_ZONE_ID`: Route 53 hosted zone for custom domains
+- `API_KEY`: API key for accessing performance monitoring endpoints
 
-### Infrastructure
-- **Serverless**: Lambda-based architecture
-- **Scalable**: Auto-scaling ECS tasks for analysis
-- **Monitoring**: Built-in observability
-- **Secure**: IAM roles and policies
+## Package Dependencies
 
-## Configuration
-
-Environment variables are managed through:
-- GitHub repository variables (`AWS_ACCOUNT`, `AWS_DEPLOYMENT_REGION`, etc.)
-- GitHub repository secrets (`API_KEY`, `GRAPHITE_AUTH`)
-- CDK configuration in `packages/infrastructure/cfg/configuration.ts`
-
-## API Integration
-
-The Next.js app fetches data from the existing API:
-- **Endpoint**: `/api/browse-reports`
-- **ISR**: Data refreshes every 5 minutes automatically
-- **Fallback**: Graceful handling of API failures
+- **shared**: Provides common types used by both infrastructure and web-app
+- **infrastructure**: Uses shared types for API responses and data structures
+- **web-app**: Uses shared types for component props and data display

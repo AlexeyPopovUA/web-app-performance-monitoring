@@ -1,20 +1,6 @@
 "use client";
 
-type SingleReport = {
-  projectName: string;
-  variantName: string;
-  environment: string;
-  date: string;
-  path: string;
-}
-
-type GroupedReports = {
-  [projectName: string]: {
-    [environment: string]: {
-      [variantName: string]: SingleReport[];
-    };
-  };
-}
+import { GroupedReports } from '@web-perf-mon/shared';
 
 interface ReportsGridProps {
   reports: GroupedReports;

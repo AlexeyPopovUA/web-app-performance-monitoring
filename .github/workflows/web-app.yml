@@ -7,6 +7,7 @@ on:
       - develop
     paths:
       - 'packages/web-app/**'
+      - 'packages/shared/**'
       - 'pnpm-workspace.yaml'
       - 'package.json'
       - '.github/workflows/web-app.yml'
@@ -70,9 +71,10 @@ jobs:
         run: |
           pnpm --filter web-app test --passWithNoTests
 
-      - name: Build Next.js SSG application
+      - name: Build shared package and web app
         run: |
-          pnpm --filter web-app build
+          pnpm --filter @web-perf-mon/shared build
+          pnpm --filter @web-perf-mon/web-app build
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
@@ -151,18 +153,6 @@ jobs:
             --metadata-directive REPLACE
           
           echo "✅ Deployment completed successfully"
-
-      # Disabled for now as requested
-      # - name: Copy main branch to root (disabled)
-      #   if: false
-      #   run: |
-      #     if [ "${{ needs.build.outputs.branch-name }}" = "main" ]; then
-      #       echo "🔄 Copying main branch to root directory"
-      #       aws s3 sync s3://${{ steps.params.outputs.bucket-name }}/main/ s3://${{ steps.params.outputs.bucket-name }}/ \
-      #         --delete \
-      #         --cache-control "public, max-age=31536000, immutable" \
-      #         --metadata-directive REPLACE
-      #     fi
 
       - name: Invalidate CloudFront cache
         if: needs.build.outputs.branch-name == 'main'
