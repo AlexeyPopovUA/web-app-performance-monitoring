@@ -100,59 +100,59 @@ export class CloudfrontConstruct extends Construct {
     });
 
     // Create Web App CloudFront distribution
-    // this.webAppDistribution = new cloudfront.Distribution(this, `${configuration.COMMON.project}-web-app-cdn`, {
-    //   defaultBehavior: {
-    //     origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
-    //       originPath: '/main', // Serve from main branch directory
-    //       originAccessLevels: [cloudfront.AccessLevel.READ],
-    //     }),
-    //     allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-    //     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-    //     cachePolicy: webAppHtmlCachePolicy,
-    //   },
-    //   additionalBehaviors: {
-    //     // Cache static assets longer
-    //     '/_next/*': {
-    //       origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
-    //         originPath: '/main',
-    //         originAccessLevels: [cloudfront.AccessLevel.READ],
-    //       }),
-    //       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-    //       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-    //       cachePolicy: webAppCachePolicy,
-    //     },
-    //     // Cache other static assets
-    //     '*.js': {
-    //       origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
-    //         originPath: '/main',
-    //         originAccessLevels: [cloudfront.AccessLevel.READ],
-    //       }),
-    //       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-    //       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-    //       cachePolicy: webAppCachePolicy,
-    //     },
-    //     '*.css': {
-    //       origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
-    //         originPath: '/main',
-    //         originAccessLevels: [cloudfront.AccessLevel.READ],
-    //       }),
-    //       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-    //       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-    //       cachePolicy: webAppCachePolicy,
-    //     },
-    //   },
-    //   domainNames: [configuration.HOSTING.staticDomainName],
-    //   certificate,
-    //   priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
-    //   defaultRootObject: 'index.html',
-    //   errorResponses: [
-    //     {
-    //       httpStatus: 404,
-    //       responseHttpStatus: 200,
-    //       responsePagePath: '/index.html', // SPA fallback
-    //     },
-    //   ],
-    // });
+    this.webAppDistribution = new cloudfront.Distribution(this, `${configuration.COMMON.project}-web-app-cdn`, {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
+          originPath: '/main', // Serve from main branch directory
+          originAccessLevels: [cloudfront.AccessLevel.READ],
+        }),
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: webAppHtmlCachePolicy,
+      },
+      additionalBehaviors: {
+        // Cache static assets longer
+        '/_next/*': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
+            originPath: '/main',
+            originAccessLevels: [cloudfront.AccessLevel.READ],
+          }),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: webAppCachePolicy,
+        },
+        // Cache other static assets
+        '*.js': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
+            originPath: '/main',
+            originAccessLevels: [cloudfront.AccessLevel.READ],
+          }),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: webAppCachePolicy,
+        },
+        '*.css': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(props.webAppBucket, {
+            originPath: '/main',
+            originAccessLevels: [cloudfront.AccessLevel.READ],
+          }),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: webAppCachePolicy,
+        },
+      },
+      domainNames: [configuration.HOSTING.staticDomainName],
+      certificate,
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      defaultRootObject: 'index.html',
+      errorResponses: [
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html', // SPA fallback
+        },
+      ],
+    });
 
     // DNS records for API distribution
     new route53.ARecord(this, `${configuration.COMMON.project}-reports-a-record`, {
