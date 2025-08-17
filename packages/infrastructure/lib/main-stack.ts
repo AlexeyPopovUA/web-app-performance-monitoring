@@ -78,11 +78,11 @@ export class MainStack extends cdk.NestedStack {
       description: 'S3 bucket name for web app hosting',
     });
 
-    new ssm.StringParameter(this, `${configuration.COMMON.project}-web-app-distribution-param`, {
-      parameterName: '/web-perf-mon/web-app/distribution-id',
-      stringValue: cloudFrontConstruct.webAppDistribution.distributionId,
-      description: 'CloudFront distribution ID for web app',
-    });
+    // new ssm.StringParameter(this, `${configuration.COMMON.project}-web-app-distribution-param`, {
+    //   parameterName: '/web-perf-mon/web-app/distribution-id',
+    //   stringValue: cloudFrontConstruct.webAppDistribution.distributionId,
+    //   description: 'CloudFront distribution ID for web app',
+    // });
 
     // Export bucket name for cross-stack reference
     new cdk.CfnOutput(this, 'WebAppBucketName', {
