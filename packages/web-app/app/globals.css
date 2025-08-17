@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* App-wide base styles */
+:root {
+  --bg: 247 247 248; /* gray-50 */
+  --fg: 17 24 39;    /* gray-900 */
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background-color: rgb(var(--bg) / 1);
+  color: rgb(var(--fg) / 1);
+}
+
+/* A simple container utility tuned for the app */
+.container {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: 1rem;
+}
