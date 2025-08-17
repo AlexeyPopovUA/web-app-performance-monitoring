@@ -167,18 +167,18 @@ export class CloudfrontConstruct extends Construct {
       target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.distribution))
     });
 
-    // // DNS records for Web App distribution
-    // new route53.ARecord(this, `${configuration.COMMON.project}-web-app-a-record`, {
-    //   recordName: configuration.HOSTING.staticDomainName,
-    //   zone: hostedZone,
-    //   target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.webAppDistribution))
-    // });
-    //
-    // new route53.AaaaRecord(this, `${configuration.COMMON.project}-web-app-aaaa-record`, {
-    //   recordName: configuration.HOSTING.staticDomainName,
-    //   zone: hostedZone,
-    //   target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.webAppDistribution))
-    // });
+    // DNS records for Web App distribution
+    new route53.ARecord(this, `${configuration.COMMON.project}-web-app-a-record`, {
+      recordName: configuration.HOSTING.staticDomainName,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.webAppDistribution))
+    });
+
+    new route53.AaaaRecord(this, `${configuration.COMMON.project}-web-app-aaaa-record`, {
+      recordName: configuration.HOSTING.staticDomainName,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(this.webAppDistribution))
+    });
 
     // Output the CloudFront URLs
     new cdk.CfnOutput(this, 'DistributionDomainName', {
@@ -186,15 +186,15 @@ export class CloudfrontConstruct extends Construct {
       description: 'The domain name of the API CloudFront distribution',
     });
 
-    // new cdk.CfnOutput(this, 'WebAppDistributionDomainName', {
-    //   value: this.webAppDistribution.distributionDomainName,
-    //   description: 'The domain name of the Web App CloudFront distribution',
-    // });
-    //
-    // new cdk.CfnOutput(this, 'WebAppDistributionId', {
-    //   value: this.webAppDistribution.distributionId,
-    //   description: 'The ID of the Web App CloudFront distribution',
-    //   exportName: `${configuration.COMMON.project}-web-app-distribution-id`,
-    // });
+    new cdk.CfnOutput(this, 'WebAppDistributionDomainName', {
+      value: this.webAppDistribution.distributionDomainName,
+      description: 'The domain name of the Web App CloudFront distribution',
+    });
+
+    new cdk.CfnOutput(this, 'WebAppDistributionId', {
+      value: this.webAppDistribution.distributionId,
+      description: 'The ID of the Web App CloudFront distribution',
+      exportName: `${configuration.COMMON.project}-web-app-distribution-id`,
+    });
   }
 }
