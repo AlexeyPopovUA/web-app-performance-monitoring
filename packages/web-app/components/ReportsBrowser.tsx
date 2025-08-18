@@ -23,9 +23,9 @@ export default function ReportsBrowser() {
           setData(json);
           setStatus("success");
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
-          setError(e?.message ?? "Unknown error");
+          setError((e as Error)?.message ?? "Unknown error");
           setStatus("error");
         }
       }
