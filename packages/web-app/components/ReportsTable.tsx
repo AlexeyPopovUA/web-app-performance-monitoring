@@ -12,6 +12,8 @@ interface ReportsTableProps {
 }
 
 export default function ReportsTable({ reports }: ReportsTableProps) {
+  const apiBaseUrl = process.env.API_BASE_URL ?? "https://api.perf-mon.examples.oleksiipopov.com";
+
   const flat: FlatReport[] = useMemo(() => {
     const rows: FlatReport[] = [];
     Object.entries(reports).forEach(([projectName, byEnv]) => {
@@ -166,7 +168,7 @@ export default function ReportsTable({ reports }: ReportsTableProps) {
                           <Td>
                             <a
                               className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:underline"
-                              href={`/${r.path}`}
+                              href={`${apiBaseUrl}/${r.path}`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
