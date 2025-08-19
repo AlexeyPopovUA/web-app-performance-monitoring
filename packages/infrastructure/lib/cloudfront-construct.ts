@@ -42,8 +42,21 @@ export class CloudfrontConstruct extends Construct {
       maxTtl: cdk.Duration.minutes(5),
       minTtl: cdk.Duration.minutes(5),
       queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
-      headerBehavior: cloudfront.CacheHeaderBehavior.allowList('Authorization', 'Content-Type'),
+      headerBehavior: cloudfront.CacheHeaderBehavior.allowList('Authorization', 'Content-Type', 'Origin'),
       cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+    });
+
+    // Response headers policy to enable CORS for localhost dev
+    const apiCorsPolicy = new cloudfront.ResponseHeadersPolicy(this, `${configuration.COMMON.project}-api-cors-policy`, {
+      responseHeadersPolicyName: `${configuration.COMMON.project}-api-cors-policy`,
+      corsBehavior: {
+        accessControlAllowCredentials: false,
+        accessControlAllowHeaders: ['*'],
+        accessControlAllowMethods: ['GET', 'HEAD', 'OPTIONS', 'POST'],
+        accessControlAllowOrigins: ['http://localhost:3000', 'https://app.perf-mon.examples.oleksiipopov.com'],
+        accessControlExposeHeaders: ['*'],
+        originOverride: true,
+      },
     });
 
     // Create cache policy for web app static assets
@@ -80,8 +93,9 @@ export class CloudfrontConstruct extends Construct {
         cachePolicy: customCachePolicy,
         cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
         originRequestPolicy: new cloudfront.OriginRequestPolicy(this, `${configuration.COMMON.project}-proxy-origin-request-policy`, {
-          headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("x-api-key")
-        })
+          headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("x-api-key"),
+        }),
+        responseHeadersPolicy: apiCorsPolicy,
       },
       additionalBehaviors: {
         '/reports/*': {
@@ -91,6 +105,7 @@ export class CloudfrontConstruct extends Construct {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          responseHeadersPolicy: apiCorsPolicy,
         }
       },
       domainNames: [configuration.HOSTING.domainName],
