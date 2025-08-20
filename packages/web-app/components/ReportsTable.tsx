@@ -1,9 +1,18 @@
 "use client";
 
 import React, {useMemo, useState} from "react";
-import type { GroupedReports, SingleReport } from "@web-perf-mon/shared";
-
-type FlatReport = SingleReport & { id: string };
+import type { GroupedReports } from "@web-perf-mon/shared";
+import { columns, FlatReport } from "./columns";
+import { DataTable } from "./data-table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
 
 type GroupMode = "project" | "environment" | "none";
 
@@ -12,7 +21,6 @@ interface ReportsTableProps {
 }
 
 export default function ReportsTable({ reports }: ReportsTableProps) {
-  const apiBaseUrl = process.env.API_BASE_URL ?? "https://api.perf-mon.examples.oleksiipopov.com";
 
   const flat: FlatReport[] = useMemo(() => {
     const rows: FlatReport[] = [];
@@ -71,27 +79,41 @@ export default function ReportsTable({ reports }: ReportsTableProps) {
     <section className="container mx-auto">
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-1 flex-wrap gap-3">
-          <Select
-            label="Project"
-            value={projectFilter}
-            onChange={setProjectFilter}
-            options={["all", ...projects]}
-          />
-          <Select
-            label="Environment"
-            value={envFilter}
-            onChange={setEnvFilter}
-            options={["all", ...environments]}
-          />
-          <Select
-            label="Variant"
-            value={variantFilter}
-            onChange={setVariantFilter}
-            options={["all", ...variants]}
-          />
+          <div className="flex min-w-[180px] flex-1 items-center gap-2 md:flex-none">
+            <Select onValueChange={setProjectFilter} defaultValue="all">
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Project" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {projects.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex min-w-[180px] flex-1 items-center gap-2 md:flex-none">
+            <Select onValueChange={setEnvFilter} defaultValue="all">
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Environment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {environments.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex min-w-[180px] flex-1 items-center gap-2 md:flex-none">
+            <Select onValueChange={setVariantFilter} defaultValue="all">
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Variant" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {variants.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex min-w-[220px] flex-1 items-center gap-2">
-            <label className="text-sm text-gray-600">Search</label>
-            <input
+            <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter by path…"
@@ -100,23 +122,10 @@ export default function ReportsTable({ reports }: ReportsTableProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">Group by</label>
           <div className="inline-flex overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
-            <button
-              className={btnSeg(group === "project")}
-              onClick={() => setGroup("project")}
-              type="button"
-            >Project</button>
-            <button
-              className={btnSeg(group === "environment")}
-              onClick={() => setGroup("environment")}
-              type="button"
-            >Environment</button>
-            <button
-              className={btnSeg(group === "none")}
-              onClick={() => setGroup("none")}
-              type="button"
-            >None</button>
+            <Button variant={group === "project" ? "default" : "outline"} onClick={() => setGroup("project")}>Project</Button>
+            <Button variant={group === "environment" ? "default" : "outline"} onClick={() => setGroup("environment")}>Environment</Button>
+            <Button variant={group === "none" ? "default" : "outline"} onClick={() => setGroup("none")}>None</Button>
           </div>
         </div>
       </div>
@@ -143,44 +152,7 @@ export default function ReportsTable({ reports }: ReportsTableProps) {
               )}
 
               <div className={(group !== "none" && collapsed[key]) ? "hidden" : "block"}>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <Th>Project</Th>
-                        <Th>Environment</Th>
-                        <Th>Variant</Th>
-                        <Th>Date</Th>
-                        <Th>Report</Th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {items.map((r, idx) => (
-                        <tr key={r.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                          <Td><Badge color="indigo">{r.projectName}</Badge></Td>
-                          <Td><Badge color="green">{r.environment}</Badge></Td>
-                          <Td><Badge color="blue">{r.variantName}</Badge></Td>
-                          <Td>
-                            <time className="text-sm text-gray-700" dateTime={new Date(r.date).toISOString()}>
-                              {new Date(r.date).toLocaleDateString()} {new Date(r.date).toLocaleTimeString()}
-                            </time>
-                          </Td>
-                          <Td>
-                            <a
-                              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:underline"
-                              href={`${apiBaseUrl}/${r.path}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M12.293 2.293a1 1 0 011.414 0l4 4A1 1 0 0117 7h-1v6a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h6V3a1 1 0 011-1zM6 6a1 1 0 00-1 1v6a1 1 0 001 1h7a1 1 0 001-1V7a1 1 0 00-1-1H6z"/></svg>
-                              Open report
-                            </a>
-                          </Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable columns={columns} data={items} />
               </div>
             </div>
           );
@@ -192,55 +164,4 @@ export default function ReportsTable({ reports }: ReportsTableProps) {
       </div>
     </section>
   );
-}
-
-function Th({children}: {children: React.ReactNode}) {
-  return (
-    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-      {children}
-    </th>
-  );
-}
-
-function Td({children}: {children: React.ReactNode}) {
-  return (
-    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
-      {children}
-    </td>
-  );
-}
-
-function Badge({children, color = "gray"}: {children: React.ReactNode, color?: "gray"|"indigo"|"green"|"blue"}) {
-  const map: Record<string, string> = {
-    gray: "bg-gray-100 text-gray-800 ring-gray-200",
-    indigo: "bg-indigo-100 text-indigo-800 ring-indigo-200",
-    green: "bg-green-100 text-green-800 ring-green-200",
-    blue: "bg-blue-100 text-blue-800 ring-blue-200",
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${map[color]}`}>
-      {children}
-    </span>
-  );
-}
-
-function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
-  return (
-    <div className="flex min-w-[180px] flex-1 items-center gap-2 md:flex-none">
-      <label className="text-sm text-gray-600">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="block w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm outline-none ring-0 focus:border-blue-500 md:w-[200px]"
-      >
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt === "all" ? "All" : opt}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function btnSeg(active: boolean) {
-  return "px-3 py-1.5 text-sm " + (active ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50");
 }
